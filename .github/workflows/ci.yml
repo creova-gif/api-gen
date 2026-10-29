@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Run Unit Tests
+      run: |
+        python -m unittest discover -s tests -v
+
+    - name: Verify CLI Generation
+      run: |
+        python apigen.py inspect -d examples/customers.csv
+        python apigen.py generate -d examples/customers.csv -o ./test_api --auth --mock 10
+        test -f test_api/openapi.json
+        test -f test_api/app/main.py
+        test -f test_api/tests/test_api.py
+        test -f test_api/terraform/main.tf
