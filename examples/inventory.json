@@ -1,0 +1,26 @@
+[
+  {
+    "sku": "LAPTOP-X1",
+    "name": "ThinkPad X1 Carbon Gen 12",
+    "category": "laptops",
+    "unit_price": 1499.99,
+    "stock_quantity": 42,
+    "last_restocked": "2024-03-01"
+  },
+  {
+    "sku": "MOUSE-MX3",
+    "name": "Logitech MX Master 3S",
+    "category": "peripherals",
+    "unit_price": 99.99,
+    "stock_quantity": 150,
+    "last_restocked": "2024-03-12"
+  },
+  {
+    "sku": "MONITOR-4K",
+    "name": "Dell UltraSharp 27 4K",
+    "category": "monitors",
+    "unit_price": 549.50,
+    "stock_quantity": 28,
+    "last_restocked": "2024-02-28"
+  }
+]

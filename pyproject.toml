@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "api-gen"
+version = "0.1.0"
+description = "Schema-to-API engine generating OpenAPI 3.1, FastAPI, and Cloud Run Terraform"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Justin Mafie"}
+]
+dependencies = []
+
+[project.scripts]
+apigen = "apigen.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["apigen*"]

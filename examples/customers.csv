@@ -1,0 +1,6 @@
+customer_id,full_name,email,plan_tier,account_balance,is_active,created_at
+101,Alice Johnson,alice@example.com,pro,250.50,true,2024-01-15T09:30:00Z
+102,Bob Smith,bob@acme.org,free,0.00,true,2024-02-01T14:22:10Z
+103,Charlie Davis,charlie@venture.io,enterprise,1540.75,false,2023-11-20T18:05:00Z
+104,Diana Prince,diana@themyscira.gov,enterprise,3200.00,true,2024-03-10T11:15:30Z
+105,Evan Wright,evan.w@sample.net,free,12.50,false,2024-04-05T16:45:00Z
