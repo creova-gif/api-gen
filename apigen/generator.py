@@ -46,14 +46,14 @@ def _py_type_annotation_optional(field: FieldDef) -> str:
 def _generate_synthetic_record(schema: SchemaDef, idx: int) -> Dict[str, Any]:
     row: Dict[str, Any] = {}
     for f in schema.fields:
-        if f.is_primary_key:
+        if f.openapi_format == "uuid":
+            row[f.name] = str(uuid.uuid5(uuid.NAMESPACE_URL, f"{schema.resource_name}/{f.name}/{idx}"))
+        elif f.is_primary_key:
             row[f.name] = idx if f.python_type == "int" else f"ID_{idx:04d}"
         elif f.enum_values:
             row[f.name] = random.choice(f.enum_values)
         elif f.openapi_format == "email":
             row[f.name] = f"user_{idx}@example.com"
-        elif f.openapi_format == "uuid":
-            row[f.name] = str(uuid.uuid5(uuid.NAMESPACE_URL, f"{schema.resource_name}/{f.name}/{idx}"))
         elif f.openapi_format == "date":
             row[f.name] = (date.today() - timedelta(days=idx * 3)).isoformat()
         elif f.openapi_format == "date-time":
