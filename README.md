@@ -157,7 +157,7 @@ my_customer_api/
 ## 🛠️ CLI Reference
 
 ```text
-usage: apigen [-h] {inspect,generate} ...
+usage: apigen [-h] {inspect,generate,diff} ...
 ```
 
 ### `apigen inspect`
@@ -180,6 +180,16 @@ Generates complete OpenAPI spec, FastAPI app, Pytest suite, and Terraform script
 | `--mock` | | `0` | Synthesize N schema-valid mock records |
 | `--intent` | `-i` | `None` | Natural language guidance (e.g. `"read-only"`) |
 
+### `apigen diff` *(Self-Maintaining APIs)*
+Detects breaking vs. non-breaking schema drift between datasets and outputs automated GitHub PR bodies.
+
+| Flag | Shorthand | Default | Description |
+| :--- | :---: | :---: | :--- |
+| `--old` | `-a` | *Required* | Path to base data source |
+| `--new` | `-b` | *Required* | Path to updated data source |
+| `--name` | `-n` | Inferred | Override resource name |
+| `--pr` | `-p` | None | Save markdown PR body for automated GitHub pull requests |
+
 ---
 
 ## 🧪 Testing APIGen
@@ -199,7 +209,9 @@ python3 -m unittest discover -s tests -v
 - [x] Google Cloud Run v2 Terraform templates
 - [x] API Key authentication via Google Secret Manager
 - [x] Synthetic mock data synthesis (`--mock`)
+- [x] Schema drift detection & automated PR generator (`apigen diff`)
 - [ ] Multi-table foreign key relational inference (`--schema-dir`)
+- [ ] Automated client AST code-patcher (Self-Maintaining API bot)
 - [ ] AWS ECS / Fargate Terraform provider
 - [ ] Pluggable DuckDB & SQLite persistent storage adapters
 

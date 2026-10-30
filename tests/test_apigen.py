@@ -1,6 +1,7 @@
 """
 Unit tests for APIGen Blueprint Wedge.
-Tests schema inference, intent planning, mock generation, and code generation.
+Tests schema inference, intent planning, mock generation, code generation,
+and self-maintaining schema diffing / PR generation.
 """
 
 import json
@@ -11,6 +12,8 @@ import unittest
 from apigen.infer import infer_schema_from_records
 from apigen.planner import create_api_plan
 from apigen.generator import generate_project
+from apigen.diff import diff_schemas, ChangeType, Severity
+from apigen.patcher import generate_pr_markdown
 
 
 class TestAPIGen(unittest.TestCase):
@@ -67,6 +70,34 @@ class TestAPIGen(unittest.TestCase):
                 code = f.read()
             self.assertIn("verify_api_key", code)
             self.assertIn("X-API-Key", code)
+
+    def test_diff_schemas_breaking_and_non_breaking(self):
+        old_records = [
+            {"id": 1, "username": "alice", "age": 28, "status": "active"},
+            {"id": 2, "username": "bob", "age": 34, "status": "pending"},
+        ]
+        new_records = [
+            # Removed 'age' (BREAKING)
+            # Removed 'username' (BREAKING)
+            # Added non-nullable 'user_handle' (BREAKING)
+            # Added optional 'avatar_url' (NON-BREAKING)
+            {"id": 1, "user_handle": "alice", "status": "active", "avatar_url": "https://img.com/a.png"},
+            {"id": 2, "user_handle": "bob", "status": "pending", "avatar_url": None},
+        ]
+        old_schema = infer_schema_from_records(old_records, resource_name="user")
+        new_schema = infer_schema_from_records(new_records, resource_name="user")
+
+        diff = diff_schemas(old_schema, new_schema)
+        self.assertTrue(diff.has_breaking_changes)
+        self.assertEqual(len(diff.breaking_changes), 3)  # age removed, username removed, user_handle added (required)
+        self.assertTrue(any(c.change_type == ChangeType.FIELD_REMOVED and c.field_name == "age" for c in diff.changes))
+        self.assertTrue(any(c.change_type == ChangeType.FIELD_REMOVED and c.field_name == "username" for c in diff.changes))
+        self.assertTrue(any(c.field_name == "avatar_url" and c.severity == Severity.NON_BREAKING for c in diff.changes))
+
+        pr_markdown = generate_pr_markdown(diff)
+        self.assertIn("Automated API Maintenance", pr_markdown)
+        self.assertIn("BREAKING%20CHANGES", pr_markdown)
+        self.assertIn("🚨 **Breaking Changes**", pr_markdown)
 
 
 if __name__ == "__main__":

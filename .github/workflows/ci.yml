@@ -25,7 +25,7 @@ jobs:
       run: |
         python -m unittest discover -s tests -v
 
-    - name: Verify CLI Generation
+    - name: Verify CLI Generation & Self-Maintaining Diff
       run: |
         python apigen.py inspect -d examples/customers.csv
         python apigen.py generate -d examples/customers.csv -o ./test_api --auth --mock 10
@@ -33,3 +33,5 @@ jobs:
         test -f test_api/app/main.py
         test -f test_api/tests/test_api.py
         test -f test_api/terraform/main.tf
+        python apigen.py diff -a examples/customers.csv -b examples/customers_v2.csv --pr pr_test.md
+        test -f pr_test.md

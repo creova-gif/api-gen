@@ -1,6 +1,7 @@
 """
 APIGen Command Line Interface (CLI).
-Enables rapid schema inspection and end-to-end API generation from legacy data sources.
+Enables rapid schema inspection, end-to-end API generation, schema diffing,
+and self-maintaining API PR generation.
 """
 
 import argparse
@@ -10,6 +11,8 @@ from pathlib import Path
 from apigen.infer import infer_from_file
 from apigen.planner import create_api_plan
 from apigen.generator import generate_project
+from apigen.diff import diff_files, Severity
+from apigen.patcher import generate_pr_markdown, generate_migration_summary
 
 
 def cmd_inspect(args: argparse.Namespace) -> None:
@@ -69,10 +72,42 @@ def cmd_generate(args: argparse.Namespace) -> None:
     print(f"  uvicorn app.main:app --reload\n")
 
 
+def cmd_diff(args: argparse.Namespace) -> None:
+    old_path = Path(args.old)
+    new_path = Path(args.new)
+
+    print(f"\n🔍 APIGen Diff: Comparing '{old_path}' vs '{new_path}'...")
+    diff = diff_files(old_path, new_path, resource_name=args.name)
+
+    if not diff.changes:
+        print("✅ No schema changes detected. Data contracts are identical.\n")
+        return
+
+    print(f"\nResource: {diff.new_resource}")
+    status_icon = "🚨 BREAKING CHANGES DETECTED" if diff.has_breaking_changes else "✅ All changes backward-compatible"
+    print(f"Status: {status_icon}")
+    print("-" * 80)
+    print(f"{'Severity':<16} {'Change Type':<24} {'Field':<18} {'Details'}")
+    print("-" * 80)
+
+    for c in diff.changes:
+        sev_label = f"[{c.severity.value}]"
+        print(f"{sev_label:<16} {c.change_type.value:<24} {c.field_name:<18} {c.description}")
+
+    print("-" * 80)
+    print(f"Total: {len(diff.changes)} change(s) | {len(diff.breaking_changes)} breaking | {len(diff.non_breaking_changes)} non-breaking\n")
+
+    if args.pr:
+        pr_md = generate_pr_markdown(diff)
+        pr_file = Path(args.pr)
+        pr_file.write_text(pr_md, encoding="utf-8")
+        print(f"📝 Generated Autonomous PR Markdown saved to: '{pr_file}'\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="apigen",
-        description="APIGen: Schema-to-API wedge generating OpenAPI 3.1, FastAPI, and Cloud Run Terraform.",
+        description="APIGen: Self-Maintaining Schema-to-API engine generating OpenAPI 3.1, FastAPI, and Cloud Run Terraform.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -91,6 +126,14 @@ def main() -> None:
     gen_parser.add_argument("--mock", type=int, default=0, help="Synthesize N mock records for the schema")
     gen_parser.add_argument("--out", "-o", help="Output directory path")
     gen_parser.set_defaults(func=cmd_generate)
+
+    # Diff (Self-Maintaining API)
+    diff_parser = subparsers.add_parser("diff", help="Diff two schemas/datasets to detect breaking drift & generate PRs")
+    diff_parser.add_argument("--old", "-a", required=True, help="Path to original data source (.csv, .json, .sqlite)")
+    diff_parser.add_argument("--new", "-b", required=True, help="Path to updated data source (.csv, .json, .sqlite)")
+    diff_parser.add_argument("--name", "-n", help="Override resource name")
+    diff_parser.add_argument("--pr", "-p", help="Output file path to save automated GitHub PR markdown body")
+    diff_parser.set_defaults(func=cmd_diff)
 
     args = parser.parse_args()
     args.func(args)

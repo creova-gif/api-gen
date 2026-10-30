@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2026-10-30
+
+### Added
+- **Self-Maintaining API Diff & Drift Detection Engine (`apigen/diff.py`)**:
+  - Diffs two schema snapshots or datasets to detect breaking vs. non-breaking changes.
+  - Detects added/removed fields, type modifications, nullability changes, PK alterations, and enum drift.
+- **Autonomous Pull Request Markdown Generator (`apigen/patcher.py`)**:
+  - Automatically synthesizes GitHub PR descriptions with actionable impact summaries and migration steps.
+- **CLI Subcommand `apigen diff`**:
+  - Added `-a/--old` and `-b/--new` comparison with optional `-p/--pr` automated PR output.
+- **Comprehensive Unit Tests**:
+  - Added test coverage for breaking and backward-compatible schema changes.
+
+---
+
 ## [0.1.0] - 2026-10-29
 
 ### Added
