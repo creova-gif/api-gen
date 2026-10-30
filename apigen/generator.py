@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 from apigen.planner import APIPlan
 from apigen.infer import FieldDef, SchemaDef
+from apigen.sdk_generator import generate_typescript_sdk
 
 
 def _py_type_annotation(field: FieldDef) -> str:
@@ -396,6 +397,7 @@ import uuid
 
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field
 {auth_imports}
 
@@ -407,6 +409,28 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json",
 )
+
+# --- Scalar Modern Interactive API Reference ---
+@app.get("/scalar", response_class=HTMLResponse, include_in_schema=False)
+def scalar_docs():
+    return """
+    <!doctype html>
+    <html>
+      <head>
+        <title>{plan.title} - Scalar Reference</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body>
+        <script
+          id="api-reference"
+          data-url="/openapi.json"
+          data-configuration='{{"theme":"purple"}}'>
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+      </body>
+    </html>
+    """
 
 app.add_middleware(
     CORSMiddleware,
@@ -770,6 +794,7 @@ output "service_url" {{
 
 def generate_readme(plan: APIPlan) -> str:
     schema = plan.schema
+    res_title = schema.resource_name.capitalize()
     auth_doc = ""
     auth_curl = ""
     if plan.auth_enabled:
@@ -804,9 +829,29 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 ### 4. Explore Interactive Docs
+- Scalar Modern UI: [http://localhost:8000/scalar](http://localhost:8000/scalar)
 - Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
 - Redoc UI: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 - OpenAPI Spec: [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json)
+
+---
+
+## TypeScript Client SDK
+
+A zero-dependency typed client SDK is automatically emitted to `sdk/client.ts`.
+
+```typescript
+import {{ {res_title}Client }} from "./sdk/client";
+
+const client = new {res_title}Client({{
+  baseUrl: "http://localhost:8000",
+  apiKey: "your-api-key",
+}});
+
+// Fully typed response with pagination
+const response = await client.list({{ limit: 10, q: "alice" }});
+console.log(response.items);
+```
 
 ---
 
@@ -897,5 +942,14 @@ def generate_project(plan: APIPlan, output_dir: Path) -> Dict[str, str]:
     with open(readme_path, "w", encoding="utf-8") as f:
         f.write(readme)
     generated_files["README.md"] = str(readme_path)
+
+    # 8. TypeScript Client SDK (sdk/client.ts)
+    sdk_dir = output_dir / "sdk"
+    sdk_dir.mkdir(exist_ok=True)
+    ts_sdk = generate_typescript_sdk(plan)
+    ts_sdk_path = sdk_dir / "client.ts"
+    with open(ts_sdk_path, "w", encoding="utf-8") as f:
+        f.write(ts_sdk)
+    generated_files["sdk/client.ts"] = str(ts_sdk_path)
 
     return generated_files

@@ -33,5 +33,6 @@ jobs:
         test -f test_api/app/main.py
         test -f test_api/tests/test_api.py
         test -f test_api/terraform/main.tf
+        test -f test_api/sdk/client.ts
         python apigen.py diff -a examples/customers.csv -b examples/customers_v2.csv --pr pr_test.md
         test -f pr_test.md

@@ -144,7 +144,9 @@ my_customer_api/
 ├── openapi.json            # Strict OpenAPI 3.1.0 contract
 ├── app/
 │   ├── __init__.py
-│   └── main.py             # FastAPI service, Pydantic v2 models, auth guard & filters
+│   └── main.py             # FastAPI service, Pydantic v2 models, Scalar docs & auth
+├── sdk/
+│   └── client.ts           # Zero-dependency typed TypeScript Client SDK
 ├── tests/
 │   ├── __init__.py
 │   └── test_api.py         # Automated contract tests (health, CRUD, pagination, auth)
@@ -206,6 +208,8 @@ python3 -m unittest discover -s tests -v
 
 - [x] CSV, JSON, and SQLite schema inference
 - [x] OpenAPI 3.1.0 & Pydantic v2 code generator
+- [x] Modern Interactive Scalar Documentation (`/scalar`)
+- [x] Zero-Dependency Typed TypeScript Client SDK (`sdk/client.ts`)
 - [x] Google Cloud Run v2 Terraform templates
 - [x] API Key authentication via Google Secret Manager
 - [x] Synthetic mock data synthesis (`--mock`)

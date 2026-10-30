@@ -58,6 +58,7 @@ class TestAPIGen(unittest.TestCase):
             self.assertIn("tests/test_api.py", files)
             self.assertIn("Dockerfile", files)
             self.assertIn("terraform/main.tf", files)
+            self.assertIn("sdk/client.ts", files)
 
             # Check openapi auth
             with open(files["openapi.json"], "r") as f:
@@ -65,11 +66,18 @@ class TestAPIGen(unittest.TestCase):
             self.assertIn("securitySchemes", spec["components"])
             self.assertIn("ApiKeyAuth", spec["components"]["securitySchemes"])
 
-            # Check main.py has mock records
+            # Check main.py has mock records and scalar docs
             with open(files["app/main.py"], "r") as f:
                 code = f.read()
             self.assertIn("verify_api_key", code)
             self.assertIn("X-API-Key", code)
+            self.assertIn("/scalar", code)
+
+            # Check generated TypeScript SDK
+            with open(files["sdk/client.ts"], "r") as f:
+                ts_sdk = f.read()
+            self.assertIn("export class OrderClient", ts_sdk)
+            self.assertIn("async list(params: OrderListParams = {}): Promise<OrderListResponse>", ts_sdk)
 
     def test_diff_schemas_breaking_and_non_breaking(self):
         old_records = [
