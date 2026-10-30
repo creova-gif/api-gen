@@ -43,6 +43,24 @@ class TestAPIGen(unittest.TestCase):
         self.assertEqual(field_map["email"].openapi_format, "email")
         self.assertEqual(field_map["token"].openapi_format, "uuid")
 
+    def test_uuid_mocks_are_valid_uuids(self):
+        import uuid
+        from apigen.generator import _generate_synthetic_record
+        records = [
+            {"uuid": "0b6c7f0e-9a3e-4c1e-8f43-2f6a1d9b7c11", "owner": "a@example.com"},
+            {"uuid": "5d2a8e4b-1c3f-4b7a-9e6d-8a0f2c4e6b13", "owner": "b@example.com"},
+        ]
+        schema = infer_schema_from_records(records, "token")
+        row = _generate_synthetic_record(schema, 3)
+        uuid.UUID(row["uuid"])
+        self.assertEqual(row["owner"], "user_3@example.com")
+
+    def test_diff_detects_string_format_change(self):
+        old = infer_schema_from_records([{"id": 1, "contact": "a@example.com"}], "user")
+        new = infer_schema_from_records([{"id": 1, "contact": "alice"}], "user")
+        diff = diff_schemas(old, new)
+        self.assertTrue(any(c.change_type == ChangeType.TYPE_CHANGED and c.field_name == "contact" for c in diff.changes))
+
     def test_planner_read_only(self):
         records = [{"id": 1, "title": "Report A"}]
         schema = infer_schema_from_records(records, resource_name="report")
