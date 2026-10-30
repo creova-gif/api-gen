@@ -108,9 +108,13 @@ python3 apigen.py generate \
 
 ```bash
 cd my_customer_api
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pytest tests/
+export API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"  # required with --auth
 uvicorn app.main:app --port 8080 --reload
 ```
+
+With `--auth`, the service fails closed: resource endpoints return `503` until `API_KEY` is set, and `401` for a missing or wrong `X-API-Key`. The Terraform module takes the key as a sensitive `api_key` variable (`terraform apply -var="api_key=..."`).
 
 - **Interactive Swagger UI**: [http://localhost:8080/docs](http://localhost:8080/docs)
 - **ReDoc Technical Docs**: [http://localhost:8080/redoc](http://localhost:8080/redoc)
@@ -139,8 +143,9 @@ Every generated microservice is a clean, production-ready repository:
 ```text
 my_customer_api/
 ├── README.md               # Quickstart and endpoint documentation
-├── requirements.txt        # Pinned dependencies (FastAPI, Pydantic v2, pytest)
-├── Dockerfile              # Multi-stage Python 3.12-slim container
+├── requirements.txt        # Runtime dependencies (FastAPI, Uvicorn, Pydantic v2)
+├── requirements-dev.txt    # Test dependencies (pytest, httpx)
+├── Dockerfile              # Non-root Python 3.12-slim container
 ├── openapi.json            # Strict OpenAPI 3.1.0 contract
 ├── app/
 │   ├── __init__.py
@@ -165,7 +170,8 @@ usage: apigen [-h] {inspect,generate,diff,studio} ...
 ### `apigen studio` *(Interactive Web UI)*
 Launches the zero-setup, dark-mode APIGen Studio in your browser:
 ```bash
-python3 apigen.py studio
+python3 apigen.py studio            # binds 127.0.0.1:3000
+python3 apigen.py studio --host 0.0.0.0 --port 8000 --no-open
 ```
 - Drag-and-drop CSV, JSON, or SQLite datasets.
 - Interactive in-browser live testing sandbox.

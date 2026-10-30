@@ -17,7 +17,7 @@
    * **Transparency over Black Boxes:** Users must see the inferred types, inspect the generated Python/TypeScript code, and test endpoints live.
    * **1-Click Export:** Download clean code or copy cURL/fetch snippets with zero vendor lock-in.
 3. **Tech Stack & Distribution:**
-   * Standalone, zero-build client app (`studio/index.html`) using Tailwind CSS, vanilla ES2022 JavaScript, and standard browser Web APIs.
+   * Standalone, zero-build client app (`apigen/studio/index.html`) using Tailwind CSS, vanilla ES2022 JavaScript, and standard browser Web APIs.
    * Bundled directly into the `api-gen` Python distribution (`python3 apigen.py studio`) and hostable statically on GitHub Pages, Vercel, or Cloud Run.
 
 ---
