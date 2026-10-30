@@ -5,7 +5,10 @@ and self-maintaining API PR generation.
 """
 
 import argparse
+import http.server
+import socketserver
 import sys
+import webbrowser
 from pathlib import Path
 
 from apigen.infer import infer_from_file
@@ -104,6 +107,36 @@ def cmd_diff(args: argparse.Namespace) -> None:
         print(f"📝 Generated Autonomous PR Markdown saved to: '{pr_file}'\n")
 
 
+def cmd_studio(args: argparse.Namespace) -> None:
+    port = args.port or 3000
+    studio_dir = Path(__file__).resolve().parent.parent / "studio"
+    if not studio_dir.exists():
+        print(f"❌ Studio directory not found at: {studio_dir}")
+        return
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *a, **kw):
+            super().__init__(*a, directory=str(studio_dir), **kw)
+
+        def log_message(self, format, *a):
+            # Clean silent logger
+            pass
+
+    print(f"\n⚡ Launching APIGen Studio (Interactive Web UI)...")
+    print(f"   URL: http://localhost:{port}")
+    print(f"   Directory: {studio_dir}")
+    print("   Press Ctrl+C to stop.\n")
+
+    if not args.no_open:
+        webbrowser.open(f"http://localhost:{port}")
+
+    with socketserver.TCPServer(("", port), Handler) as httpd:
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\nShutting down APIGen Studio.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="apigen",
@@ -134,6 +167,12 @@ def main() -> None:
     diff_parser.add_argument("--name", "-n", help="Override resource name")
     diff_parser.add_argument("--pr", "-p", help="Output file path to save automated GitHub PR markdown body")
     diff_parser.set_defaults(func=cmd_diff)
+
+    # Studio (Interactive Web UI)
+    studio_parser = subparsers.add_parser("studio", help="Launch the interactive in-browser APIGen Studio UI")
+    studio_parser.add_argument("--port", "-p", type=int, default=3000, help="Port to bind server (default: 3000)")
+    studio_parser.add_argument("--no-open", action="store_true", help="Do not automatically open the browser")
+    studio_parser.set_defaults(func=cmd_studio)
 
     args = parser.parse_args()
     args.func(args)

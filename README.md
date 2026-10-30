@@ -159,8 +159,18 @@ my_customer_api/
 ## 🛠️ CLI Reference
 
 ```text
-usage: apigen [-h] {inspect,generate,diff} ...
+usage: apigen [-h] {inspect,generate,diff,studio} ...
 ```
+
+### `apigen studio` *(Interactive Web UI)*
+Launches the zero-setup, dark-mode APIGen Studio in your browser:
+```bash
+python3 apigen.py studio
+```
+- Drag-and-drop CSV, JSON, or SQLite datasets.
+- Interactive in-browser live testing sandbox.
+- Live syntax-highlighted previews of FastAPI, TypeScript SDK, and Terraform.
+- 1-Click ZIP bundle export.
 
 ### `apigen inspect`
 Inspects data source and prints detected column types, primary keys, and filter candidates.
@@ -210,6 +220,7 @@ python3 -m unittest discover -s tests -v
 - [x] OpenAPI 3.1.0 & Pydantic v2 code generator
 - [x] Modern Interactive Scalar Documentation (`/scalar`)
 - [x] Zero-Dependency Typed TypeScript Client SDK (`sdk/client.ts`)
+- [x] Interactive In-Browser Studio UI (`apigen studio`)
 - [x] Google Cloud Run v2 Terraform templates
 - [x] API Key authentication via Google Secret Manager
 - [x] Synthetic mock data synthesis (`--mock`)

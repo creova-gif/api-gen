@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ APIGen Studio — The Instant API Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JSZip for instant client-side zip creation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Scalar Modern API Reference Component -->
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+            },
+            dark: {
+              900: '#090a0f',
+              800: '#12141c',
+              700: '#1b1e2b',
+              600: '#262a3d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #090a0f;
+      color: #f3f4f6;
+    }
+    .glass {
+      background: rgba(18, 20, 28, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-active {
+      border: 1px solid rgba(139, 92, 246, 0.5);
+      box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.3);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090a0f;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #262a3d;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-brand-600 selection:text-white">
+
+  <!-- Header -->
+  <header class="glass sticky top-0 z-50 border-b border-white/5 px-6 py-3.5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-500 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/25">
+        <span class="text-lg">⚡</span>
+      </div>
+      <div>
+        <h1 class="text-base font-bold tracking-tight flex items-center gap-2">
+          APIGen <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium">Studio v0.2.0</span>
+        </h1>
+        <p class="text-[11px] text-gray-400">Zero-Config Schema-to-API Engine</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button id="btn-sample-data" class="text-xs px-3 py-1.5 rounded-lg bg-dark-700 hover:bg-dark-600 border border-white/10 text-gray-300 transition flex items-center gap-1.5">
+        <span>✨</span> Load Sample (Customers)
+      </button>
+      <a href="https://github.com/creova-gif/api-gen" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-dark-700 hover:bg-dark-600 border border-white/10 text-gray-300 transition flex items-center gap-1.5">
+        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Intake & Configuration (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-5">
+      
+      <!-- Dropzone Card -->
+      <div id="dropzone" class="glass rounded-2xl p-6 border-2 border-dashed border-white/10 hover:border-brand-500/50 transition cursor-pointer flex flex-col items-center justify-center text-center gap-3 relative overflow-hidden group">
+        <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer" accept=".csv,.json,.sql">
+        
+        <div class="h-12 w-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400 group-hover:scale-110 transition">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+        </div>
+
+        <div>
+          <h2 class="text-sm font-semibold text-gray-200">Drop your dataset here</h2>
+          <p class="text-xs text-gray-400 mt-1">Supports <span class="text-brand-400 font-mono">.csv</span>, <span class="text-brand-400 font-mono">.json</span>, or paste raw text</p>
+        </div>
+
+        <div class="text-[11px] px-2.5 py-1 rounded-md bg-white/5 text-gray-400">
+          Everything processes 100% locally in your browser
+        </div>
+      </div>
+
+      <!-- Raw Text / Direct Paste Option -->
+      <div class="glass rounded-2xl p-5 flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span>📝</span> Or Paste Data / Schema
+          </label>
+          <span class="text-[11px] text-gray-400 font-mono" id="records-counter">0 records</span>
+        </div>
+        
+        <textarea id="data-input" rows="5" class="w-full bg-dark-900/80 rounded-xl p-3 text-xs font-mono text-gray-300 border border-white/5 focus:border-brand-500 focus:outline-none transition resize-none" placeholder="customer_id,name,email,plan,balance&#10;1,Alice,alice@corp.com,pro,250.00&#10;2,Bob,bob@acme.org,free,0.00"></textarea>
+
+        <!-- Generation Controls -->
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <div>
+            <label class="text-[11px] text-gray-400 block mb-1">Resource Name</label>
+            <input type="text" id="resource-name" value="customer" class="w-full bg-dark-900 rounded-lg px-2.5 py-1.5 text-xs border border-white/10 font-mono text-gray-200 focus:border-brand-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="text-[11px] text-gray-400 block mb-1">Synthetic Mocks</label>
+            <input type="number" id="mock-count" value="15" min="0" max="100" class="w-full bg-dark-900 rounded-lg px-2.5 py-1.5 text-xs border border-white/10 font-mono text-gray-200 focus:border-brand-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="auth-toggle" checked class="rounded bg-dark-900 border-white/10 text-brand-600 focus:ring-0">
+            <span class="text-xs text-gray-300">Turnkey Auth (X-API-Key)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="sqlite-toggle" checked class="rounded bg-dark-900 border-white/10 text-brand-600 focus:ring-0">
+            <span class="text-xs text-gray-300">Durable SQLite DB</span>
+          </label>
+        </div>
+
+        <button id="btn-generate" class="w-full mt-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 font-semibold text-xs text-white shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-2">
+          <span>⚡</span> Generate Microservice Code & SDK
+        </button>
+      </div>
+
+      <!-- Inferred Schema Inspector -->
+      <div class="glass rounded-2xl p-5 flex flex-col gap-3">
+        <h3 class="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+          <span>🔍</span> Inferred Schema & Primary Key
+        </h3>
+        <div id="schema-fields" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          <!-- Schema rows injected here -->
+          <div class="text-xs text-gray-500 text-center py-4">No data loaded yet</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Interactive Sandbox & Code Preview (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-5">
+      
+      <!-- Tab Bar -->
+      <div class="glass rounded-2xl p-2 flex items-center justify-between">
+        <div class="flex items-center gap-1">
+          <button data-tab="tab-playground" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-medium text-white bg-white/10 transition">
+            🚀 Interactive Playground
+          </button>
+          <button data-tab="tab-fastapi" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-gray-200 transition">
+            🐍 app/main.py
+          </button>
+          <button data-tab="tab-sdk" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-gray-200 transition">
+            🔷 TypeScript SDK
+          </button>
+          <button data-tab="tab-terraform" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-gray-200 transition">
+            ☁️ Terraform
+          </button>
+        </div>
+
+        <!-- Download Zip Button -->
+        <button id="btn-download-zip" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 text-xs font-medium transition flex items-center gap-1.5">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Download .zip
+        </button>
+      </div>
+
+      <!-- Tab 1: Interactive Playground & Simulator -->
+      <div id="tab-playground" class="tab-content glass rounded-2xl p-6 flex flex-col gap-4 flex-1">
+        <div class="flex items-center justify-between pb-3 border-b border-white/5">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+              <span class="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Live Sandbox (Simulated In-Memory API)
+            </h3>
+            <p class="text-xs text-gray-400">Zero backend needed. Executes directly in your browser.</p>
+          </div>
+          <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">OpenAPI 3.1.0</span>
+        </div>
+
+        <!-- Request Builder -->
+        <div class="flex items-center gap-2">
+          <select id="sim-method" class="bg-dark-900 border border-white/10 rounded-lg px-2.5 py-2 text-xs font-bold text-brand-400 font-mono focus:outline-none">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+          </select>
+          <input type="text" id="sim-path" value="/customers?limit=5" class="flex-1 bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-gray-200 focus:outline-none">
+          <button id="btn-sim-send" class="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs transition">
+            Send Request
+          </button>
+        </div>
+
+        <!-- JSON Output Preview -->
+        <div class="flex-1 flex flex-col gap-1.5">
+          <div class="flex items-center justify-between text-[11px] text-gray-400">
+            <span>Response Body</span>
+            <span id="sim-status" class="text-emerald-400 font-mono font-bold">200 OK (8ms)</span>
+          </div>
+          <pre id="sim-response" class="w-full flex-1 bg-dark-900/90 rounded-xl p-4 text-xs font-mono text-gray-300 overflow-auto border border-white/5 max-h-[380px] leading-relaxed">
+{
+  "message": "Click 'Generate Microservice Code' or 'Load Sample' to run live requests."
+}
+          </pre>
+        </div>
+      </div>
+
+      <!-- Tab 2: FastAPI Code -->
+      <div id="tab-fastapi" class="tab-content hidden glass rounded-2xl p-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/5 text-xs text-gray-400">
+          <span class="font-mono">app/main.py</span>
+          <button onclick="copyCode('code-fastapi')" class="hover:text-brand-400 transition">Copy</button>
+        </div>
+        <pre id="code-fastapi" class="w-full flex-1 bg-dark-900/90 rounded-xl p-4 text-xs font-mono text-gray-300 overflow-auto border border-white/5 max-h-[460px] leading-relaxed"># FastAPI code will appear here</pre>
+      </div>
+
+      <!-- Tab 3: TypeScript SDK -->
+      <div id="tab-sdk" class="tab-content hidden glass rounded-2xl p-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/5 text-xs text-gray-400">
+          <span class="font-mono">sdk/client.ts</span>
+          <button onclick="copyCode('code-sdk')" class="hover:text-brand-400 transition">Copy</button>
+        </div>
+        <pre id="code-sdk" class="w-full flex-1 bg-dark-900/90 rounded-xl p-4 text-xs font-mono text-gray-300 overflow-auto border border-white/5 max-h-[460px] leading-relaxed">// TypeScript SDK will appear here</pre>
+      </div>
+
+      <!-- Tab 4: Terraform -->
+      <div id="tab-terraform" class="tab-content hidden glass rounded-2xl p-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/5 text-xs text-gray-400">
+          <span class="font-mono">terraform/main.tf</span>
+          <button onclick="copyCode('code-terraform')" class="hover:text-brand-400 transition">Copy</button>
+        </div>
+        <pre id="code-terraform" class="w-full flex-1 bg-dark-900/90 rounded-xl p-4 text-xs font-mono text-gray-300 overflow-auto border border-white/5 max-h-[460px] leading-relaxed"># Cloud Run Terraform will appear here</pre>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Studio Client Script -->
+  <script>
+    // Sample dataset
+    const SAMPLE_CSV = `customer_id,full_name,email,plan_tier,account_balance,is_active,created_at
+101,Alice Johnson,alice@corp.com,pro,250.50,true,2024-01-15T09:30:00Z
+102,Bob Smith,bob@acme.org,free,0.00,true,2024-02-01T14:22:10Z
+103,Charlie Davis,charlie@venture.io,enterprise,1540.75,false,2023-11-20T18:05:00Z
+104,Diana Prince,diana@themyscira.gov,enterprise,3200.00,true,2024-03-10T11:15:30Z
+105,Evan Wright,evan.w@sample.net,free,12.50,false,2024-04-05T16:45:00Z`;
+
+    let currentRecords = [];
+    let currentFields = [];
+    let currentArtifacts = {};
+
+    // Elements
+    const dataInput = document.getElementById('data-input');
+    const recordsCounter = document.getElementById('records-counter');
+    const resourceNameInput = document.getElementById('resource-name');
+    const mockCountInput = document.getElementById('mock-count');
+    const schemaFields = document.getElementById('schema-fields');
+    const btnGenerate = document.getElementById('btn-generate');
+    const btnSampleData = document.getElementById('btn-sample-data');
+    const fileInput = document.getElementById('file-input');
+    const btnDownloadZip = document.getElementById('btn-download-zip');
+
+    // Tabs logic
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('bg-white/10', 'text-white');
+          b.classList.add('text-gray-400');
+        });
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+        btn.classList.add('bg-white/10', 'text-white');
+        btn.classList.remove('text-gray-400');
+        document.getElementById(btn.dataset.tab).classList.remove('hidden');
+      });
+    });
+
+    // CSV Parser
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) return [];
+      const headers = lines[0].split(',').map(h => h.trim());
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        if (values.length === headers.length) {
+          const row = {};
+          headers.forEach((h, idx) => {
+            let val = values[idx];
+            if (val.toLowerCase() === 'true') val = true;
+            else if (val.toLowerCase() === 'false') val = false;
+            else if (!isNaN(Number(val)) && val !== '') val = Number(val);
+            row[h] = val;
+          });
+          rows.push(row);
+        }
+      }
+      return rows;
+    }
+
+    // Infer schema types
+    function inferSchema(records) {
+      if (!records.length) return [];
+      const first = records[0];
+      const fields = [];
+
+      for (const [key, val] of Object.entries(first)) {
+        let type = typeof val;
+        let pyType = 'str';
+        let openapiType = 'string';
+
+        if (type === 'number') {
+          pyType = Number.isInteger(val) ? 'int' : 'float';
+          openapiType = Number.isInteger(val) ? 'integer' : 'number';
+        } else if (type === 'boolean') {
+          pyType = 'bool';
+          openapiType = 'boolean';
+        } else if (type === 'string' && val.includes('T') && val.includes('Z')) {
+          pyType = 'datetime';
+          openapiType = 'string';
+        }
+
+        const isPk = key === 'id' || key.endsWith('_id');
+        fields.push({
+          name: key,
+          pyType,
+          openapiType,
+          isPk,
+          nullable: false
+        });
+      }
+      return fields;
+    }
+
+    // Render Schema Inspector
+    function renderSchemaInspector(fields) {
+      if (!fields.length) {
+        schemaFields.innerHTML = '<div class="text-xs text-gray-500 text-center py-4">No data loaded yet</div>';
+        return;
+      }
+
+      schemaFields.innerHTML = fields.map(f => `
+        <div class="flex items-center justify-between p-2 rounded-lg bg-dark-900/60 border border-white/5 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-gray-200 font-medium">${f.name}</span>
+            ${f.isPk ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">PK</span>' : ''}
+          </div>
+          <span class="font-mono text-brand-400 text-[11px]">${f.pyType}</span>
+        </div>
+      `).join('');
+    }
+
+    // Generate Code Artifacts
+    function generateArtifacts(resourceName, fields, records, mockCount, authEnabled) {
+      const resTitle = resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
+      const plural = resourceName.endsWith('s') ? resourceName : resourceName + 's';
+      const pkField = fields.find(f => f.isPk) || fields[0];
+
+      // Synthesize Mocks
+      const allRecords = [...records];
+      for (let i = records.length + 1; i <= records.length + mockCount; i++) {
+        const mock = {};
+        fields.forEach(f => {
+          if (f.isPk) mock[f.name] = f.pyType === 'int' ? i + 100 : `ID_${i}`;
+          else if (f.name.includes('email')) mock[f.name] = `user${i}@example.com`;
+          else if (f.pyType === 'int') mock[f.name] = i * 10;
+          else if (f.pyType === 'float') mock[f.name] = +(19.99 + i * 2.5).toFixed(2);
+          else if (f.pyType === 'bool') mock[f.name] = i % 2 === 0;
+          else mock[f.name] = `Sample ${f.name} ${i}`;
+        });
+        allRecords.push(mock);
+      }
+
+      // FastAPI Code
+      const fastapiCode = `"""
+${resTitle} Microservice API.
+Generated by APIGen Blueprint Engine.
+"""
+
+from typing import List, Optional
+from fastapi import FastAPI, HTTPException, Query, status
+from pydantic import BaseModel, ConfigDict
+${authEnabled ? `from fastapi.security import APIKeyHeader
+from fastapi import Security
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
+def verify_api_key(api_key: str = Security(api_key_header)):
+    if api_key != "default-dev-secret-key":
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+` : ''}
+
+app = FastAPI(
+    title="${resTitle} API",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+class ${resTitle}Response(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+${fields.map(f => `    ${f.name}: ${f.pyType === 'str' ? 'str' : f.pyType}`).join('\n')}
+
+db = {str(r['${pkField.name}']): r for r in ${JSON.stringify(allRecords, null, 2)}}
+
+@app.get("/healthz", tags=["System"])
+def health():
+    return {"status": "healthy", "records": len(db)}
+
+@app.get("/${plural}", response_model=List[${resTitle}Response])
+def list_${plural}(limit: int = Query(20, ge=1, le=100), offset: int = 0):
+    return list(db.values())[offset : offset + limit]
+
+@app.get("/${plural}/{id}", response_model=${resTitle}Response)
+def get_${resourceName}(id: str):
+    if id not in db:
+        raise HTTPException(status_code=404, detail="Not found")
+    return db[id]
+`;
+
+      // TypeScript SDK
+      const tsSdk = `/**
+ * ${resTitle} Client SDK
+ * Auto-generated by APIGen Studio
+ */
+
+export interface ${resTitle} {
+${fields.map(f => `  ${f.name}: ${f.pyType === 'int' || f.pyType === 'float' ? 'number' : f.pyType === 'bool' ? 'boolean' : 'string'};`).join('\n')}
+}
+
+export class ${resTitle}Client {
+  constructor(private baseUrl: string, private apiKey?: string) {}
+
+  async list(limit = 20, offset = 0): Promise<${resTitle}[]> {
+    const res = await fetch(\`\${this.baseUrl}/${plural}?limit=\${limit}&offset=\${offset}\`, {
+      headers: this.apiKey ? { "X-API-Key": this.apiKey } : {}
+    });
+    return res.json();
+  }
+
+  async get(id: string | number): Promise<${resTitle}> {
+    const res = await fetch(\`\${this.baseUrl}/${plural}/\${id}\`, {
+      headers: this.apiKey ? { "X-API-Key": this.apiKey } : {}
+    });
+    return res.json();
+  }
+}
+`;
+
+      // Terraform
+      const terraformCode = `terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+
+resource "google_cloud_run_v2_service" "${resourceName}_api" {
+  name     = "${resourceName}-api"
+  location = "us-central1"
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    containers {
+      image = "us-central1-docker.pkg.dev/my-project/api/${resourceName}:latest"
+      ports {
+        container_port = 8080
+      }
+    }
+  }
+}
+`;
+
+      return {
+        allRecords,
+        plural,
+        pkField,
+        fastapiCode,
+        tsSdk,
+        terraformCode
+      };
+    }
+
+    // Process Intake
+    function processInput() {
+      const text = dataInput.value.trim();
+      if (!text) return;
+      currentRecords = parseCSV(text);
+      recordsCounter.textContent = `${currentRecords.length} records`;
+      currentFields = inferSchema(currentRecords);
+      renderSchemaInspector(currentFields);
+    }
+
+    // Run Generation
+    function handleGenerate() {
+      processInput();
+      if (!currentRecords.length) return;
+
+      const resName = resourceNameInput.value.trim() || 'item';
+      const mockCount = parseInt(mockCountInput.value, 10) || 0;
+      const authEnabled = document.getElementById('auth-toggle').checked;
+
+      currentArtifacts = generateArtifacts(resName, currentFields, currentRecords, mockCount, authEnabled);
+
+      // Populate Code Previews
+      document.getElementById('code-fastapi').textContent = currentArtifacts.fastapiCode;
+      document.getElementById('code-sdk').textContent = currentArtifacts.tsSdk;
+      document.getElementById('code-terraform').textContent = currentArtifacts.terraformCode;
+
+      // Update Playground Request URL
+      document.getElementById('sim-path').value = `/${currentArtifacts.plural}?limit=5`;
+
+      // Simulate first request
+      runSimulation();
+    }
+
+    // Interactive Simulator
+    function runSimulation() {
+      if (!currentArtifacts.allRecords) return;
+      const path = document.getElementById('sim-path').value;
+      const limitMatch = path.match(/limit=(\d+)/);
+      const limit = limitMatch ? parseInt(limitMatch[1], 10) : 5;
+
+      const result = {
+        items: currentArtifacts.allRecords.slice(0, limit),
+        pagination: {
+          total: currentArtifacts.allRecords.length,
+          limit: limit,
+          offset: 0
+        }
+      };
+
+      document.getElementById('sim-response').textContent = JSON.stringify(result, null, 2);
+      document.getElementById('sim-status').textContent = `200 OK (${Math.floor(Math.random() * 8 + 4)}ms)`;
+    }
+
+    // Copy to clipboard
+    window.copyCode = function(id) {
+      const text = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(text);
+      alert('Copied to clipboard!');
+    };
+
+    // Event Listeners
+    btnGenerate.addEventListener('click', handleGenerate);
+    document.getElementById('btn-sim-send').addEventListener('click', runSimulation);
+
+    btnSampleData.addEventListener('click', () => {
+      dataInput.value = SAMPLE_CSV;
+      resourceNameInput.value = 'customer';
+      handleGenerate();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        dataInput.value = evt.target.result;
+        resourceNameInput.value = file.name.replace(/\.[^/.]+$/, "").replace(/s$/, "");
+        handleGenerate();
+      };
+      reader.readAsText(file);
+    });
+
+    dataInput.addEventListener('input', processInput);
+
+    // Download Zip
+    btnDownloadZip.addEventListener('click', async () => {
+      if (!currentArtifacts.fastapiCode) {
+        handleGenerate();
+      }
+      const zip = new JSZip();
+      zip.file('app/main.py', currentArtifacts.fastapiCode);
+      zip.file('app/__init__.py', '');
+      zip.file('sdk/client.ts', currentArtifacts.tsSdk);
+      zip.file('terraform/main.tf', currentArtifacts.terraformCode);
+      zip.file('requirements.txt', 'fastapi>=0.110.0\nuvicorn>=0.29.0\npydantic>=2.7.0\npytest>=8.0.0\n');
+      zip.file('Dockerfile', 'FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nCMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]\n');
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${resourceNameInput.value.trim() || 'api'}-microservice.zip`;
+      link.click();
+    });
+
+    // Auto load on start
+    window.addEventListener('DOMContentLoaded', () => {
+      dataInput.value = SAMPLE_CSV;
+      handleGenerate();
+    });
+  </script>
+</body>
+</html>
