@@ -368,7 +368,6 @@ def generate_fastapi_code(plan: APIPlan) -> str:
 
     # Auth block
     auth_imports = ""
-    auth_dependency = ""
     endpoint_security = ""
     if plan.auth_enabled:
         auth_imports = """

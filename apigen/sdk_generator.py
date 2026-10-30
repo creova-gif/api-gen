@@ -4,8 +4,7 @@ Emits a lightweight, zero-dependency TypeScript client SDK with full type defini
 matching the generated OpenAPI specification and Pydantic models.
 """
 
-from typing import List
-from apigen.infer import FieldDef, SchemaDef
+from apigen.infer import FieldDef
 from apigen.planner import APIPlan
 
 

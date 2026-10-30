@@ -7,7 +7,7 @@ Categorizes changes into BREAKING vs NON-BREAKING, and can auto-patch client and
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 from apigen.infer import FieldDef, SchemaDef, infer_from_file
 

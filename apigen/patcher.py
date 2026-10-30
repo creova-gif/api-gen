@@ -5,8 +5,7 @@ when a schema change or API drift occurs.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List
-from apigen.diff import ChangeType, FieldChange, SchemaDiff, Severity
+from apigen.diff import SchemaDiff
 
 
 def generate_migration_summary(diff: SchemaDiff) -> str:
