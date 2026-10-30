@@ -4,6 +4,7 @@ Tests schema inference, intent planning, mock generation, code generation,
 and self-maintaining schema diffing / PR generation.
 """
 
+import ast
 import json
 import tempfile
 from pathlib import Path
@@ -44,7 +45,7 @@ class TestAPIGen(unittest.TestCase):
 
     def test_generate_project_with_auth_and_mocks(self):
         records = [
-            {"order_id": 1001, "total": 49.99, "status": "pending"},
+            {"order_id": 1001, "total": 49.99, "status": "pending", "paid": True},
         ]
         schema = infer_schema_from_records(records, resource_name="order")
         plan = create_api_plan(schema, intent="Allow filter by status", auth_enabled=True, mock_count=10)
@@ -72,6 +73,15 @@ class TestAPIGen(unittest.TestCase):
             self.assertIn("verify_api_key", code)
             self.assertIn("X-API-Key", code)
             self.assertIn("/scalar", code)
+
+            # Seed records must be valid Python literals (e.g. True, not true)
+            tree = ast.parse(code)
+            seed_node = next(
+                n.value for n in tree.body
+                if isinstance(n, ast.AnnAssign) and getattr(n.target, "id", None) == "INITIAL_RECORDS"
+            )
+            seed = ast.literal_eval(seed_node)
+            self.assertEqual(len(seed), 10)
 
             # Check generated TypeScript SDK
             with open(files["sdk/client.ts"], "r") as f:

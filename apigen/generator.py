@@ -4,6 +4,7 @@ Generates OpenAPI 3.1, FastAPI app with Pydantic models, Dockerfile, Terraform f
 """
 
 import json
+import pprint
 import random
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -360,7 +361,7 @@ def generate_fastapi_code(plan: APIPlan) -> str:
         for i in range(needed):
             records.append(_generate_synthetic_record(schema, start_idx + i))
 
-    seed_json = json.dumps(records, indent=4, default=str)
+    seed_json = pprint.pformat(json.loads(json.dumps(records, default=str)), indent=4, sort_dicts=False)
 
     # Auth block
     auth_imports = ""
