@@ -108,7 +108,8 @@ def cmd_diff(args: argparse.Namespace) -> None:
 
 def cmd_studio(args: argparse.Namespace) -> None:
     port = args.port or 3000
-    studio_dir = Path(__file__).resolve().parent.parent / "studio"
+    host = args.host
+    studio_dir = Path(__file__).resolve().parent / "studio"
     if not studio_dir.exists():
         print(f"❌ Studio directory not found at: {studio_dir}")
         return
@@ -122,14 +123,15 @@ def cmd_studio(args: argparse.Namespace) -> None:
             pass
 
     print("\n⚡ Launching APIGen Studio (Interactive Web UI)...")
-    print(f"   URL: http://localhost:{port}")
+    print(f"   URL: http://{host}:{port}")
     print(f"   Directory: {studio_dir}")
     print("   Press Ctrl+C to stop.\n")
 
     if not args.no_open:
-        webbrowser.open(f"http://localhost:{port}")
+        webbrowser.open(f"http://{host}:{port}")
 
-    with socketserver.TCPServer(("", port), Handler) as httpd:
+    socketserver.TCPServer.allow_reuse_address = True
+    with socketserver.TCPServer((host, port), Handler) as httpd:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
@@ -170,6 +172,7 @@ def main() -> None:
     # Studio (Interactive Web UI)
     studio_parser = subparsers.add_parser("studio", help="Launch the interactive in-browser APIGen Studio UI")
     studio_parser.add_argument("--port", "-p", type=int, default=3000, help="Port to bind server (default: 3000)")
+    studio_parser.add_argument("--host", default="127.0.0.1", help="Interface to bind (default: 127.0.0.1; use 0.0.0.0 to expose)")
     studio_parser.add_argument("--no-open", action="store_true", help="Do not automatically open the browser")
     studio_parser.set_defaults(func=cmd_studio)
 
