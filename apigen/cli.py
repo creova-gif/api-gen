@@ -7,15 +7,14 @@ and self-maintaining API PR generation.
 import argparse
 import http.server
 import socketserver
-import sys
 import webbrowser
 from pathlib import Path
 
 from apigen.infer import infer_from_file
 from apigen.planner import create_api_plan
 from apigen.generator import generate_project
-from apigen.diff import diff_files, Severity
-from apigen.patcher import generate_pr_markdown, generate_migration_summary
+from apigen.diff import diff_files
+from apigen.patcher import generate_pr_markdown
 
 
 def cmd_inspect(args: argparse.Namespace) -> None:
@@ -46,7 +45,7 @@ def cmd_generate(args: argparse.Namespace) -> None:
         auth_enabled=args.auth if hasattr(args, "auth") else None,
         mock_count=args.mock if hasattr(args, "mock") else 0,
     )
-    print(f"   [2/3] API Plan formulated:")
+    print("   [2/3] API Plan formulated:")
     print(f"         - Endpoints: GET /{schema.plural_name}, GET /{schema.plural_name}/{{id}}", end="")
     if plan.allow_create:
         print(f", POST /{schema.plural_name}", end="")
@@ -58,7 +57,7 @@ def cmd_generate(args: argparse.Namespace) -> None:
     if plan.filter_fields:
         print(f"         - Filters: {', '.join(plan.filter_fields)}")
     if plan.auth_enabled:
-        print(f"         - Security: API Key (X-API-Key) enabled")
+        print("         - Security: API Key (X-API-Key) enabled")
     if plan.mock_count > 0:
         print(f"         - Mock Synthesis: {plan.mock_count} records")
 
@@ -68,11 +67,11 @@ def cmd_generate(args: argparse.Namespace) -> None:
         print(f"         + {rel}")
 
     print("\n✅ Success! API generation complete.")
-    print(f"\nTo run locally:")
+    print("\nTo run locally:")
     print(f"  cd {out_dir}")
-    print(f"  pip install -r requirements.txt")
-    print(f"  pytest tests/")
-    print(f"  uvicorn app.main:app --reload\n")
+    print("  pip install -r requirements-dev.txt")
+    print("  pytest tests/")
+    print("  uvicorn app.main:app --reload\n")
 
 
 def cmd_diff(args: argparse.Namespace) -> None:
@@ -122,7 +121,7 @@ def cmd_studio(args: argparse.Namespace) -> None:
             # Clean silent logger
             pass
 
-    print(f"\n⚡ Launching APIGen Studio (Interactive Web UI)...")
+    print("\n⚡ Launching APIGen Studio (Interactive Web UI)...")
     print(f"   URL: http://localhost:{port}")
     print(f"   Directory: {studio_dir}")
     print("   Press Ctrl+C to stop.\n")
