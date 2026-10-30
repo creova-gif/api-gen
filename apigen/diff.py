@@ -118,17 +118,19 @@ def diff_schemas(old_schema: SchemaDef, new_schema: SchemaDef) -> SchemaDiff:
         old_f = old_fields[name]
         new_f = new_fields[name]
 
-        # Type change
-        if old_f.python_type != new_f.python_type:
+        # Type change (including string formats such as email/uuid)
+        old_type = old_f.python_type + (f" ({old_f.openapi_format})" if old_f.openapi_format else "")
+        new_type = new_f.python_type + (f" ({new_f.openapi_format})" if new_f.openapi_format else "")
+        if old_type != new_type:
             # e.g., int -> float might be non-breaking in some cases, but generally type change is breaking
             changes.append(
                 FieldChange(
                     field_name=name,
                     change_type=ChangeType.TYPE_CHANGED,
                     severity=Severity.BREAKING,
-                    description=f"Field '{name}' type changed from '{old_f.python_type}' to '{new_f.python_type}'",
-                    old_value=old_f.python_type,
-                    new_value=new_f.python_type,
+                    description=f"Field '{name}' type changed from '{old_type}' to '{new_type}'",
+                    old_value=old_type,
+                    new_value=new_type,
                     migration_advice=f"Update client serialization and data models for '{name}'.",
                 )
             )
