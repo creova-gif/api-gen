@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>APIGen Studio — Autonomous API & SDK Engineering Environment</title>
   
-  <!-- Typography: Inter + JetBrains Mono for authentic VS Code / Devin feel -->
+  <!-- Typography: Inter + JetBrains Mono for authentic developer environment -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -47,7 +47,7 @@
   </script>
 
   <style>
-    /* Custom scrollbars matching VS Code / Devin */
+    /* Custom scrollbars matching modern developer tools */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -145,7 +145,7 @@
 
     <!-- Right: Agent Status, Run Service, Export Actions -->
     <div class="flex items-center gap-2">
-      <!-- Devin/Conductor Agent Pill -->
+      <!-- APIGen Autonomous Agent Pill -->
       <div class="flex items-center gap-2 px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-xs">
         <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-agent"></span>
         <span class="text-[11px] font-medium text-zinc-300">Agent:</span>
@@ -193,7 +193,7 @@
           <span class="sr-only">Explorer</span>
         </button>
 
-        <!-- Devin / Conductor AI Agent Plan Button -->
+        <!-- APIGen Autonomous Agent Plan Button -->
         <button id="act-btn-agent" data-panel="panel-agent" class="activity-btn w-full h-11 flex items-center justify-center text-zinc-500 hover:text-white relative transition group border-l-2 border-transparent" title="AI Synthesizer Agent Tasks">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -426,8 +426,7 @@
         <span id="ec-path-folder" class="text-zinc-400">app</span>
         <span>&rsaquo;</span>
         <span id="ec-path-filename" class="text-zinc-300">main.py</span>
-        <span>&rsaquo;</span>
-        <span class="text-indigo-400">@app.get("/customers")</span>
+        <span id="ec-path-symbol" class="text-indigo-400">› @app.get("/customers")</span>
       </div>
 
       <!-- Code Surface with Line Numbers Gutter -->
@@ -446,7 +445,7 @@
     </main>
 
     <!-- --------------------------------------------------------------------- -->
-    <!-- 2D. RIGHT PANE: Devin / Conductor AI Agent Trace & API Simulator      -->
+    <!-- 2D. RIGHT PANE: APIGen Autonomous Agent Trace & API Simulator         -->
     <!-- --------------------------------------------------------------------- -->
     <aside class="w-96 bg-ide-sidebar border-l border-ide-border flex flex-col shrink-0 overflow-hidden">
       
@@ -455,7 +454,7 @@
         <div class="flex items-center gap-1">
           <button id="rp-tab-agent" class="px-2.5 py-1 rounded text-xs font-semibold text-white bg-zinc-800 border border-zinc-700/60 transition flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>Devin Agent</span>
+            <span>APIGen Agent</span>
           </button>
           <button id="rp-tab-simulator" class="px-2.5 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 transition flex items-center gap-1.5">
             <span>Live API Client</span>
@@ -465,7 +464,7 @@
         <span class="text-[10px] font-mono text-zinc-500 uppercase">Sub-5ms WASM</span>
       </div>
 
-      <!-- VIEW 1: Devin / Conductor Autonomous Agent Session View -->
+      <!-- VIEW 1: APIGen Autonomous Agent Session View -->
       <div id="view-agent-panel" class="flex-1 flex flex-col p-3 overflow-y-auto gap-3.5">
         
         <!-- Agent Goal Card -->
@@ -484,7 +483,7 @@
           </p>
         </div>
 
-        <!-- Devin Task Plan Checklist -->
+        <!-- APIGen Engineering Task Plan Checklist -->
         <div class="flex flex-col gap-1.5">
           <span class="text-[10px] font-mono uppercase text-zinc-500 font-semibold tracking-wider">Engineering Plan</span>
           <div class="flex flex-col gap-1 text-xs">
@@ -1236,6 +1235,20 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
       }
       breadcrumbFile.textContent = state.activeFile;
 
+      const ecPathSymbol = document.getElementById('ec-path-symbol');
+      const plural = state.resourceName.endsWith('s') ? state.resourceName : state.resourceName + 's';
+      if (state.activeFile === 'app/main.py') {
+        ecPathSymbol.textContent = `› @app.get("/${plural}")`;
+        ecPathSymbol.classList.remove('hidden');
+      } else if (state.activeFile === 'sdk/client.ts') {
+        const resTitle = state.resourceName.charAt(0).toUpperCase() + state.resourceName.slice(1);
+        ecPathSymbol.textContent = `› class ${resTitle}Client`;
+        ecPathSymbol.classList.remove('hidden');
+      } else {
+        ecPathSymbol.textContent = '';
+        ecPathSymbol.classList.add('hidden');
+      }
+
       // Language indicator
       if (state.activeFile.endsWith('.py')) sbLangIndicator.textContent = 'Python';
       else if (state.activeFile.endsWith('.ts')) sbLangIndicator.textContent = 'TypeScript';
@@ -1414,14 +1427,49 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
     function openFileInEditor(file) {
       state.activeFile = file;
       
-      // Update Tab Bar
-      let tabExists = false;
-      document.querySelectorAll('.editor-tab').forEach(t => {
+      const tabsContainer = document.getElementById('editor-tabs');
+      let tab = tabsContainer.querySelector(`[data-tab-file="${file}"]`);
+      
+      if (!tab) {
+        tab = document.createElement('button');
+        tab.dataset.tabFile = file;
+        const icon = file.endsWith('.py') ? '🐍' : file.endsWith('.ts') ? '🔷' : file.endsWith('.tf') ? '☁️' : file.endsWith('.json') ? '⚡' : file.endsWith('.md') ? '📖' : '📄';
+        const name = file.split('/').pop();
+        tab.className = 'editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition';
+        tab.innerHTML = `<span class="text-xs font-mono">${icon}</span><span>${name}</span><span class="tab-close text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>`;
+        
+        tab.addEventListener('click', (e) => {
+          if (e.target.classList.contains('tab-close')) {
+            e.stopPropagation();
+            tab.remove();
+            const remaining = tabsContainer.querySelectorAll('.editor-tab');
+            if (remaining.length) {
+              openFileInEditor(remaining[remaining.length - 1].dataset.tabFile);
+            }
+            return;
+          }
+          openFileInEditor(file);
+        });
+        tabsContainer.appendChild(tab);
+      }
+
+      // Activate Tab
+      tabsContainer.querySelectorAll('.editor-tab').forEach(t => {
         if (t.dataset.tabFile === file) {
-          tabExists = true;
           t.className = 'editor-tab tab-active h-full px-3 flex items-center gap-2 text-zinc-300 border-r border-ide-border transition';
         } else {
           t.className = 'editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition';
+        }
+      });
+
+      // Highlight in Explorer
+      document.querySelectorAll('.file-item').forEach(b => {
+        if (b.dataset.file === file) {
+          b.classList.add('bg-zinc-800/80', 'text-zinc-200');
+          b.classList.remove('text-zinc-400');
+        } else {
+          b.classList.remove('bg-zinc-800/80', 'text-zinc-200');
+          b.classList.add('text-zinc-400');
         }
       });
 
@@ -1455,7 +1503,7 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
       updateWorkspace();
     });
 
-    // Right Pane Tab Switching (Devin Agent vs Live API Client)
+    // Right Pane Tab Switching (APIGen Agent vs Live API Client)
     const rpTabAgent = document.getElementById('rp-tab-agent');
     const rpTabSimulator = document.getElementById('rp-tab-simulator');
     const viewAgentPanel = document.getElementById('view-agent-panel');
@@ -1476,8 +1524,17 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
     });
 
     // Activity Rail Button actions
-    document.getElementById('act-btn-explorer').addEventListener('click', () => {
-      document.getElementById('sidebar-container').classList.toggle('hidden');
+    const actBtnExplorer = document.getElementById('act-btn-explorer');
+    const sidebarContainer = document.getElementById('sidebar-container');
+    actBtnExplorer.addEventListener('click', () => {
+      sidebarContainer.classList.toggle('hidden');
+      if (sidebarContainer.classList.contains('hidden')) {
+        actBtnExplorer.classList.remove('border-indigo-500', 'text-indigo-400');
+        actBtnExplorer.classList.add('border-transparent', 'text-zinc-500');
+      } else {
+        actBtnExplorer.classList.add('border-indigo-500', 'text-indigo-400');
+        actBtnExplorer.classList.remove('border-transparent', 'text-zinc-500');
+      }
     });
     document.getElementById('act-btn-agent').addEventListener('click', () => {
       rpTabAgent.click();
