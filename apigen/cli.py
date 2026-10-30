@@ -70,7 +70,7 @@ def cmd_generate(args: argparse.Namespace) -> None:
     print("\n✅ Success! API generation complete.")
     print(f"\nTo run locally:")
     print(f"  cd {out_dir}")
-    print(f"  pip install -r requirements.txt")
+    print(f"  pip install -r requirements-dev.txt")
     print(f"  pytest tests/")
     print(f"  uvicorn app.main:app --reload\n")
 

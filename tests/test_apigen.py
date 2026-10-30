@@ -34,6 +34,15 @@ class TestAPIGen(unittest.TestCase):
         self.assertEqual(field_map["score"].python_type, "float")
         self.assertEqual(field_map["active"].python_type, "bool")
 
+    def test_infer_keeps_string_formats(self):
+        records = [
+            {"id": 1, "email": "a@example.com", "token": "0b6c7f0e-9a3e-4c1e-8f43-2f6a1d9b7c11"},
+            {"id": 2, "email": "b@example.org", "token": "5d2a8e4b-1c3f-4b7a-9e6d-8a0f2c4e6b13"},
+        ]
+        field_map = {f.name: f for f in infer_schema_from_records(records, "user").fields}
+        self.assertEqual(field_map["email"].openapi_format, "email")
+        self.assertEqual(field_map["token"].openapi_format, "uuid")
+
     def test_planner_read_only(self):
         records = [{"id": 1, "title": "Report A"}]
         schema = infer_schema_from_records(records, resource_name="report")
@@ -82,6 +91,23 @@ class TestAPIGen(unittest.TestCase):
             )
             seed = ast.literal_eval(seed_node)
             self.assertEqual(len(seed), 10)
+
+            # No hardcoded API keys anywhere in the generated project
+            self.assertNotIn("default-dev-secret-key", code)
+            self.assertIn("hmac.compare_digest", code)
+            with open(files["terraform/main.tf"], "r") as f:
+                tf = f.read()
+            self.assertIn("secret_data = var.api_key", tf)
+            self.assertIn("sensitive   = true", tf)
+            self.assertNotIn("change-me", tf)
+
+            # Test-only dependencies stay out of the production image
+            with open(files["requirements.txt"], "r") as f:
+                self.assertNotIn("pytest", f.read())
+            with open(files["requirements-dev.txt"], "r") as f:
+                self.assertIn("pytest", f.read())
+            with open(files["Dockerfile"], "r") as f:
+                self.assertIn("USER appuser", f.read())
 
             # Check generated TypeScript SDK
             with open(files["sdk/client.ts"], "r") as f:

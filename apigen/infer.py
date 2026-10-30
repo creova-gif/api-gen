@@ -135,6 +135,10 @@ def infer_schema_from_records(
             py_type, oapi_type, oapi_fmt = "date", "string", "date"
         else:
             py_type, oapi_type, oapi_fmt = "str", "string", None
+            if len(types) == 1:
+                only_fmt = next(iter(types))[2]
+                if only_fmt in ("email", "uuid"):
+                    oapi_fmt = only_fmt
 
         # Detect Primary Key
         is_pk = False
