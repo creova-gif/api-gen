@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ APIGen Studio — Martian-Grade Developer Experience</title>
+  <title>APIGen Studio — Autonomous API & SDK Engineering Environment</title>
   
-  <!-- Typography: Inter-style geometric sans + Monospace precision -->
+  <!-- Typography: Inter + JetBrains Mono for authentic VS Code / Devin feel -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS Engine -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- In-Browser Zip Generator -->
+  <!-- JSZip for instant .zip export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <script>
@@ -22,22 +22,23 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+            sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
           },
           colors: {
-            brand: {
-              400: '#a78bfa',
-              500: '#8b5cf6',
-              600: '#7c3aed',
-              700: '#6d28d9',
-            },
-            surface: {
-              base: '#090a0f',
-              elevated: '#12141c',
-              card: '#181b26',
-              highlight: '#222638',
-              border: 'rgba(255, 255, 255, 0.08)',
+            ide: {
+              titlebar: '#18181b',
+              rail: '#09090b',
+              sidebar: '#121215',
+              editor: '#18181b',
+              gutter: '#141416',
+              terminal: '#0c0d0e',
+              border: '#27272a',
+              activeTab: '#1e1e24',
+              hoverTab: '#16161a',
+              statusbar: '#007acc',
+              accent: '#6366f1',
+              accentHover: '#4f46e5',
             }
           }
         }
@@ -46,376 +47,706 @@
   </script>
 
   <style>
-    body {
-      background-color: #090a0f;
-      color: #f3f4f6;
-    }
-    
-    .glass-panel {
-      background: rgba(18, 20, 28, 0.9);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    
-    .glass-card {
-      background: rgba(24, 27, 38, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .drop-active {
-      border-color: #8b5cf6 !important;
-      background: rgba(139, 92, 246, 0.08) !important;
-      box-shadow: 0 0 35px -5px rgba(139, 92, 246, 0.35);
-    }
-
-    /* Scrollbars */
+    /* Custom scrollbars matching VS Code / Devin */
     ::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
+      width: 8px;
+      height: 8px;
     }
     ::-webkit-scrollbar-track {
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 9999px;
+      background: #2d2d34;
+      border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: #3f3f46;
     }
 
-    /* Martian-grade high-contrast focus rings */
+    /* Gutter line numbers */
+    .line-numbers {
+      user-select: none;
+      color: #52525b;
+      text-align: right;
+      padding-right: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Code styling */
+    .code-content {
+      font-family: 'JetBrains Mono', monospace;
+      white-space: pre;
+      line-height: 1.5;
+    }
+
+    /* Active Tab indicator */
+    .tab-active {
+      background-color: #18181b !important;
+      color: #f4f4f5 !important;
+      border-top: 2px solid #6366f1 !important;
+      border-bottom: none !important;
+    }
+
+    /* Focus styling */
     *:focus-visible {
-      outline: 2px solid #8b5cf6 !important;
-      outline-offset: 1px !important;
+      outline: 1px solid #6366f1 !important;
+      outline-offset: -1px;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      * {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
-      }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .pulse-agent {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-brand-600 selection:text-white">
+<body class="h-full bg-ide-rail text-zinc-300 font-sans flex flex-col overflow-hidden select-none">
 
   <!-- ========================================================================= -->
-  <!-- Top Navigation Bar: Identity, Context-Switching Presets, Quick Exports    -->
+  <!-- 1. TOP WINDOW TITLEBAR (macOS / VS Code Window Header)                   -->
   <!-- ========================================================================= -->
-  <header class="glass-panel sticky top-0 z-50 px-5 py-2.5 border-b border-white/5 flex items-center justify-between">
+  <header class="h-10 bg-ide-titlebar border-b border-ide-border flex items-center justify-between px-3 z-30 shrink-0">
+    
+    <!-- Left: Traffic Lights & Workspace Title -->
     <div class="flex items-center gap-3">
-      <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center shadow-md shadow-brand-500/20">
-        <span class="text-sm font-bold text-white">⚡</span>
+      <!-- macOS Window Controls -->
+      <div class="flex items-center gap-1.5 pl-1">
+        <span class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] inline-block"></span>
       </div>
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-bold tracking-tight text-white">APIGen Studio</span>
-          <span class="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20 font-semibold">
-            MARTIAN DX
-          </span>
-        </div>
-        <p class="text-[10px] text-gray-400">Zero-Config Schema-to-Microservice & Client SDK Fabric</p>
+
+      <div class="h-4 w-px bg-zinc-800 mx-1"></div>
+
+      <!-- Workspace Path Breadcrumb -->
+      <div class="flex items-center gap-1.5 text-xs text-zinc-400">
+        <span class="text-zinc-500 font-medium">apigen-workspace</span>
+        <span class="text-zinc-600">/</span>
+        <span id="breadcrumb-res" class="font-medium text-zinc-200">customers-service</span>
+        <span class="text-zinc-600">/</span>
+        <span id="breadcrumb-file" class="text-indigo-400 font-mono text-[11px]">app/main.py</span>
       </div>
     </div>
 
-    <!-- Intermediate Context: Presets Bar -->
+    <!-- Center: Global Quick Command Palette Trigger (⌘K) -->
+    <div class="flex items-center justify-center flex-1 max-w-md mx-4">
+      <button id="btn-cmd-palette" class="w-full flex items-center justify-between px-3 py-1 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:border-zinc-700 hover:text-zinc-200 transition">
+        <div class="flex items-center gap-2">
+          <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <span class="truncate">Search files, run actions, or prompt agent...</span>
+        </div>
+        <kbd class="px-1.5 py-0.2 rounded bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-400 font-mono">⌘K</kbd>
+      </button>
+    </div>
+
+    <!-- Right: Agent Status, Run Service, Export Actions -->
     <div class="flex items-center gap-2">
-      <div class="hidden sm:flex items-center gap-1 bg-surface-elevated px-1.5 py-1 rounded-lg border border-white/5 text-xs">
-        <span class="text-[10px] text-gray-500 font-medium px-1.5 uppercase font-mono">Presets:</span>
-        <button id="preset-customers" class="px-2 py-0.5 rounded text-gray-300 hover:text-white hover:bg-white/5 font-medium transition text-xs">
-          Customers
-        </button>
-        <button id="preset-inventory" class="px-2 py-0.5 rounded text-gray-300 hover:text-white hover:bg-white/5 font-medium transition text-xs">
-          Inventory
-        </button>
-        <button id="preset-transactions" class="px-2 py-0.5 rounded text-gray-300 hover:text-white hover:bg-white/5 font-medium transition text-xs">
-          Transactions
-        </button>
+      <!-- Devin/Conductor Agent Pill -->
+      <div class="flex items-center gap-2 px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-agent"></span>
+        <span class="text-[11px] font-medium text-zinc-300">Agent:</span>
+        <span id="top-agent-status" class="text-[11px] text-emerald-400 font-mono">Ready (Synthesized)</span>
       </div>
 
-      <div class="h-4 w-px bg-white/10 hidden sm:block"></div>
-
-      <!-- Broad Context: Ecosystem Bridges (Download Zip & Copy cURL) -->
-      <button id="btn-export-zip" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
-        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      <!-- Quick Run Button -->
+      <button id="btn-top-run" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 text-xs font-semibold transition" title="Run Service locally">
+        <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z"/>
         </svg>
-        <span>Export .zip</span>
-        <span class="text-[10px] opacity-75 font-mono hidden md:inline">⌘S</span>
+        <span>Run :8000</span>
       </button>
 
-      <a href="https://github.com/creova-gif/api-gen" target="_blank" rel="noopener" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition" aria-label="GitHub Repository">
-        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      <!-- Export .zip Button -->
+      <button id="btn-top-export" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-sm" title="Download Complete Production ZIP">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        <span>Export ZIP</span>
+      </button>
+
+      <a href="https://github.com/creova-gif/api-gen" target="_blank" rel="noopener" class="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition" title="View Source on GitHub">
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
       </a>
     </div>
   </header>
 
   <!-- ========================================================================= -->
-  <!-- Two-Pane Engineering Layout (Information Density over Artificial Margin) -->
+  <!-- 2. MAIN WORKBENCH: Activity Bar + Sidebar + Editor + Agent/Terminal       -->
   <!-- ========================================================================= -->
-  <main class="flex-1 max-w-[1536px] w-full mx-auto p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
+  <div class="flex-1 flex overflow-hidden">
 
     <!-- --------------------------------------------------------------------- -->
-    <!-- Left Pane: Immediate Context (Intake, Schema Inferrer, Parameters)    -->
+    <!-- 2A. LEFT ACTIVITY BAR (48px VS Code Rail)                             -->
     <!-- --------------------------------------------------------------------- -->
-    <div class="lg:col-span-5 flex flex-col gap-4">
-
-      <!-- Compact File Ingestion Dropzone -->
-      <section aria-labelledby="dropzone-label" class="glass-panel rounded-xl p-4 border border-dashed border-white/10 hover:border-brand-500/40 transition flex items-center justify-between relative group cursor-pointer" id="dropzone">
-        <input type="file" id="file-uploader" class="absolute inset-0 opacity-0 cursor-pointer" accept=".csv,.json,.sql,.sqlite" aria-label="Drop data file here">
-        
-        <div class="flex items-center gap-3">
-          <div class="h-9 w-9 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400 group-hover:scale-105 transition">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
-          <div>
-            <h2 id="dropzone-label" class="text-xs font-semibold text-gray-200">
-              Drag & Drop dataset file <span class="text-brand-400 font-mono text-[10px]">(.csv, .json, .sqlite)</span>
-            </h2>
-            <p class="text-[10px] text-gray-500">Infers schema locally in &lt;15ms</p>
-          </div>
-        </div>
-
-        <span class="text-[10px] px-2 py-0.5 rounded bg-white/5 text-gray-400 font-mono">
-          Local WASM
-        </span>
-      </section>
-
-      <!-- Raw Input Editor Card with Sturdy Controls -->
-      <section class="glass-panel rounded-xl p-4 flex flex-col gap-3">
-        <div class="flex items-center justify-between text-xs font-semibold text-gray-300">
-          <div class="flex items-center gap-1.5">
-            <span>📝</span> Data Input & Schema Definition
-          </div>
-          <span id="records-counter" class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-gray-400">
-            5 rows detected
-          </span>
-        </div>
-
-        <!-- Raw Textarea with Line Numbers Feel -->
-        <textarea id="raw-input" rows="5" class="w-full bg-surface-base/90 rounded-lg p-3 text-xs font-mono text-gray-300 border border-white/10 focus:border-brand-500 focus:outline-none transition resize-none leading-relaxed" spellcheck="false" placeholder="Paste CSV or JSON records here..."></textarea>
-
-        <!-- Inline Sturdy Parameters (Evil Martians Principle: Visible, High-Utility Inputs) -->
-        <div class="grid grid-cols-2 gap-3 pt-1">
-          <div>
-            <label for="resource-name" class="text-[10px] font-medium text-gray-400 uppercase tracking-wider block mb-1">Resource Name</label>
-            <input type="text" id="resource-name" value="customer" class="w-full bg-surface-elevated rounded-lg px-2.5 py-1.5 text-xs font-mono border border-white/10 text-gray-200 focus:border-brand-500 focus:outline-none">
-          </div>
-          <div>
-            <label for="mock-count" class="text-[10px] font-medium text-gray-400 uppercase tracking-wider block mb-1">Synthetic Mocks</label>
-            <input type="number" id="mock-count" value="25" min="0" max="250" class="w-full bg-surface-elevated rounded-lg px-2.5 py-1.5 text-xs font-mono border border-white/10 text-gray-200 focus:border-brand-500 focus:outline-none">
-          </div>
-        </div>
-
-        <!-- Sturdy Feature Toggles -->
-        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
-          <label class="flex items-center gap-2 p-2 rounded-lg bg-surface-elevated/60 border border-white/5 cursor-pointer hover:border-white/10 transition">
-            <input type="checkbox" id="auth-toggle" checked class="rounded bg-surface-base border-white/10 text-brand-600 focus:ring-0">
-            <div class="text-[11px]">
-              <div class="font-medium text-gray-200">API Key Auth</div>
-              <div class="text-[9px] text-gray-500">X-API-Key guard</div>
-            </div>
-          </label>
-          <label class="flex items-center gap-2 p-2 rounded-lg bg-surface-elevated/60 border border-white/5 cursor-pointer hover:border-white/10 transition">
-            <input type="checkbox" id="sqlite-toggle" checked class="rounded bg-surface-base border-white/10 text-brand-600 focus:ring-0">
-            <div class="text-[11px]">
-              <div class="font-medium text-gray-200">SQLite Durable DB</div>
-              <div class="text-[9px] text-gray-500">Persists on restart</div>
-            </div>
-          </label>
-        </div>
-
-        <!-- Primary Action -->
-        <button id="btn-generate" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md shadow-brand-500/20 transition flex items-center justify-center gap-2">
-          <span>⚡</span> Synthesize API & Typed Client
+    <aside class="w-12 bg-ide-rail border-r border-ide-border flex flex-col items-center justify-between py-2 shrink-0 z-20">
+      <!-- Primary Tool Icons -->
+      <div class="flex flex-col items-center gap-1 w-full">
+        <!-- Explorer Button -->
+        <button id="act-btn-explorer" data-panel="panel-explorer" class="activity-btn w-full h-11 flex items-center justify-center text-zinc-400 hover:text-white relative transition group border-l-2 border-indigo-500 text-indigo-400" title="Explorer (Files & Schema)">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <span class="sr-only">Explorer</span>
         </button>
-      </section>
 
-      <!-- Inferred Contract Schema: High-Density Table View -->
-      <section class="glass-panel rounded-xl p-4 flex flex-col gap-2.5 flex-1">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-            <span>🔍</span> Inferred Contract Schema
-          </h3>
-          <span class="text-[9px] font-mono text-brand-400 bg-brand-500/10 px-1.5 py-0.2 rounded border border-brand-500/20">
-            STRICT TYPING
-          </span>
-        </div>
+        <!-- Devin / Conductor AI Agent Plan Button -->
+        <button id="act-btn-agent" data-panel="panel-agent" class="activity-btn w-full h-11 flex items-center justify-center text-zinc-500 hover:text-white relative transition group border-l-2 border-transparent" title="AI Synthesizer Agent Tasks">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          <span class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <span class="sr-only">AI Agent</span>
+        </button>
 
-        <!-- Compact Table -->
-        <div class="overflow-x-auto rounded-lg border border-white/5">
-          <table class="w-full text-left border-collapse text-[11px] font-mono">
-            <thead>
-              <tr class="bg-surface-elevated text-gray-400 border-b border-white/5 text-[10px]">
-                <th class="p-2 font-medium">FIELD</th>
-                <th class="p-2 font-medium">PYTHON TYPE</th>
-                <th class="p-2 font-medium">OPENAPI TYPE</th>
-                <th class="p-2 font-medium text-right">ROLE</th>
-              </tr>
-            </thead>
-            <tbody id="schema-tbody" class="divide-y divide-white/5 text-gray-300">
-              <!-- Dynamically populated rows -->
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <!-- API Client / Simulator Button -->
+        <button id="act-btn-simulator" data-panel="panel-simulator" class="activity-btn w-full h-11 flex items-center justify-center text-zinc-500 hover:text-white relative transition group border-l-2 border-transparent" title="Live API Client Simulator">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          <span class="sr-only">Live Simulator</span>
+        </button>
 
-    </div>
-
-    <!-- --------------------------------------------------------------------- -->
-    <!-- Right Pane: Intermediate Context (Unified Playground & Code Views)    -->
-    <!-- --------------------------------------------------------------------- -->
-    <div class="lg:col-span-7 flex flex-col gap-4">
-
-      <!-- Sticky Segmented Tab Bar (Supports Context Preservation) -->
-      <div class="glass-panel rounded-xl p-1.5 flex items-center justify-between">
-        <nav class="flex items-center gap-1" role="tablist" aria-label="Studio Views">
-          <button id="tab-btn-playground" data-tab="tab-playground" role="tab" aria-selected="true" class="tab-trigger px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-white/10 transition flex items-center gap-1.5">
-            <span>🚀</span> Live Simulator
-          </button>
-          <button id="tab-btn-fastapi" data-tab="tab-fastapi" role="tab" aria-selected="false" class="tab-trigger px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
-            <span>🐍</span> app/main.py
-          </button>
-          <button id="tab-btn-sdk" data-tab="tab-sdk" role="tab" aria-selected="false" class="tab-trigger px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
-            <span>🔷</span> sdk/client.ts
-          </button>
-          <button id="tab-btn-terraform" data-tab="tab-terraform" role="tab" aria-selected="false" class="tab-trigger px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
-            <span>☁️</span> terraform/main.tf
-          </button>
-        </nav>
-
-        <!-- Sturdy Quick Copy Button -->
-        <button id="btn-copy-tab" class="text-xs px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition flex items-center gap-1 font-mono">
-          <span id="copy-label">Copy Code</span>
+        <!-- Raw Data Input Button -->
+        <button id="act-btn-data" data-panel="panel-data" class="activity-btn w-full h-11 flex items-center justify-center text-zinc-500 hover:text-white relative transition group border-l-2 border-transparent" title="Dataset Ingestion & Presets">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+          </svg>
+          <span class="sr-only">Data Ingestion</span>
         </button>
       </div>
 
-      <!-- Tab 1: Unified Live Simulator (All-in-One Immediate Context View) -->
-      <div id="tab-playground" role="tabpanel" class="tab-panel glass-panel rounded-xl p-5 flex flex-col gap-3.5 flex-1">
-        
-        <!-- Simulator Status Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-white/5">
-          <div class="flex items-center gap-2">
-            <span class="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <h3 class="text-xs font-semibold text-gray-200">Client-Side Microservice Simulator</h3>
+      <!-- Bottom Settings & Profile -->
+      <div class="flex flex-col items-center gap-2 w-full">
+        <button id="btn-toggle-terminal" class="w-full h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-200 transition" title="Toggle Integrated Terminal (Ctrl+`)">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </button>
+        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-[11px] font-bold text-white shadow">
+          ⚡
+        </div>
+      </div>
+    </aside>
+
+    <!-- --------------------------------------------------------------------- -->
+    <!-- 2B. PRIMARY SIDEBAR (Explorer / Presets / Config)                      -->
+    <!-- --------------------------------------------------------------------- -->
+    <aside id="sidebar-container" class="w-64 bg-ide-sidebar border-r border-ide-border flex flex-col shrink-0 overflow-y-auto">
+      
+      <!-- Explorer Header -->
+      <div class="h-9 px-3 flex items-center justify-between border-b border-ide-border/60 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+        <span id="sidebar-title">Explorer</span>
+        <div class="flex items-center gap-1">
+          <button id="btn-refresh-workspace" class="p-1 hover:text-zinc-200 text-zinc-500 rounded" title="Re-infer & regenerate">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Presets Selector Toolbar inside Sidebar -->
+      <div class="p-2.5 border-b border-ide-border/40 bg-zinc-950/40">
+        <label class="text-[10px] uppercase font-mono text-zinc-500 font-semibold block mb-1.5">Preset Datasets</label>
+        <div class="grid grid-cols-3 gap-1 text-[11px]">
+          <button id="preset-customers" class="preset-btn px-2 py-1 rounded bg-zinc-800 text-indigo-300 font-medium border border-indigo-500/30 text-center hover:bg-zinc-700 transition">
+            Users
+          </button>
+          <button id="preset-inventory" class="preset-btn px-2 py-1 rounded bg-zinc-900 text-zinc-400 font-medium border border-zinc-800 text-center hover:bg-zinc-800 transition">
+            Store
+          </button>
+          <button id="preset-transactions" class="preset-btn px-2 py-1 rounded bg-zinc-900 text-zinc-400 font-medium border border-zinc-800 text-center hover:bg-zinc-800 transition">
+            Finance
+          </button>
+        </div>
+      </div>
+
+      <!-- File Tree Structure (VS Code style) -->
+      <div class="p-2 flex-1 flex flex-col gap-1 text-xs">
+        <div class="flex items-center gap-1.5 px-1 py-1 text-zinc-400 font-semibold text-[11px] uppercase tracking-wider">
+          <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+          <span>Generated Workspace</span>
+        </div>
+
+        <!-- app/ directory -->
+        <div class="pl-2 flex flex-col">
+          <div class="flex items-center gap-1.5 px-2 py-1 text-zinc-300 font-medium">
+            <span class="text-amber-400 text-xs">📁</span>
+            <span>app</span>
           </div>
-          <div class="flex items-center gap-3">
-            <span id="sim-records-total" class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-gray-300">
-              30 items stored
-            </span>
-            <button id="btn-copy-curl" class="text-[11px] text-brand-400 hover:text-brand-300 font-mono flex items-center gap-1 transition">
-              <span>📋</span> Copy as cURL
+          <div class="pl-4 flex flex-col">
+            <button data-file="app/main.py" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-200 hover:bg-zinc-800/80 bg-zinc-800/50 text-left transition">
+              <span class="text-blue-400 font-mono text-xs">🐍</span>
+              <span class="truncate">main.py</span>
+            </button>
+            <button data-file="app/models.py" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
+              <span class="text-blue-400 font-mono text-xs">🐍</span>
+              <span class="truncate">models.py</span>
             </button>
           </div>
         </div>
 
-        <!-- Sturdy Segmented Method Selector + URL Bar (Evil Martians Pattern) -->
-        <div class="flex items-center gap-2">
-          <!-- Segmented Method Controls -->
-          <div class="flex items-center bg-surface-elevated p-0.5 rounded-lg border border-white/10 text-xs font-mono font-bold" id="method-segmented">
-            <button data-method="GET" class="method-btn px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 transition">GET</button>
-            <button data-method="POST" class="method-btn px-2.5 py-1 rounded-md text-gray-400 hover:text-gray-200 transition">POST</button>
-            <button data-method="DELETE" class="method-btn px-2.5 py-1 rounded-md text-gray-400 hover:text-gray-200 transition">DELETE</button>
+        <!-- sdk/ directory -->
+        <div class="pl-2 flex flex-col">
+          <div class="flex items-center gap-1.5 px-2 py-1 text-zinc-300 font-medium">
+            <span class="text-amber-400 text-xs">📁</span>
+            <span>sdk</span>
           </div>
-
-          <!-- Path Input -->
-          <div class="flex-1 relative flex items-center">
-            <input type="text" id="sim-endpoint" value="/customers?limit=5" class="w-full bg-surface-elevated border border-white/10 rounded-lg px-3 py-1.5 text-xs font-mono text-gray-200 focus:outline-none">
+          <div class="pl-4 flex flex-col">
+            <button data-file="sdk/client.ts" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
+              <span class="text-sky-400 font-mono text-xs">🔷</span>
+              <span class="truncate">client.ts</span>
+            </button>
           </div>
+        </div>
 
-          <!-- Trigger Button -->
-          <button id="btn-sim-send" class="px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow-md shadow-brand-500/20 transition flex items-center gap-1.5">
-            <span>Execute</span>
-            <span class="text-[10px] opacity-75 font-mono">↵</span>
+        <!-- terraform/ directory -->
+        <div class="pl-2 flex flex-col">
+          <div class="flex items-center gap-1.5 px-2 py-1 text-zinc-300 font-medium">
+            <span class="text-amber-400 text-xs">📁</span>
+            <span>terraform</span>
+          </div>
+          <div class="pl-4 flex flex-col">
+            <button data-file="terraform/main.tf" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
+              <span class="text-purple-400 font-mono text-xs">☁️</span>
+              <span class="truncate">main.tf</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Root Project Files -->
+        <div class="pl-2 flex flex-col pt-1">
+          <button data-file="data/dataset.json" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
+            <span class="text-yellow-400 font-mono text-xs">📊</span>
+            <span class="truncate">dataset.json</span>
+          </button>
+          <button data-file="openapi.json" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
+            <span class="text-emerald-400 font-mono text-xs">⚡</span>
+            <span class="truncate">openapi.json</span>
+          </button>
+          <button data-file="Dockerfile" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
+            <span class="text-cyan-400 font-mono text-xs">🐳</span>
+            <span class="truncate">Dockerfile</span>
+          </button>
+          <button data-file="README.md" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
+            <span class="text-gray-400 font-mono text-xs">📖</span>
+            <span class="truncate">README.md</span>
           </button>
         </div>
 
-        <!-- POST Payload Drawer (Only shows on POST) -->
-        <div id="post-body-container" class="hidden flex flex-col gap-1.5">
-          <div class="flex items-center justify-between text-[10px] text-gray-400 font-mono">
-            <span>JSON REQUEST PAYLOAD</span>
-            <button id="btn-reset-payload" class="text-brand-400 hover:underline">Reset Sample</button>
+        <!-- Inferred Contract Schema Section in Sidebar -->
+        <div class="mt-4 pt-3 border-t border-ide-border/60">
+          <div class="flex items-center justify-between px-2 mb-2">
+            <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider font-mono">Contract Schema</span>
+            <span id="sidebar-field-count" class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 font-mono">6 fields</span>
           </div>
-          <textarea id="sim-post-body" rows="3" class="w-full bg-surface-base/90 rounded-lg p-2.5 text-xs font-mono text-gray-300 border border-white/10 focus:outline-none resize-none"></textarea>
+          <div id="sidebar-schema-list" class="flex flex-col gap-1 px-2 text-[11px] font-mono">
+            <!-- Dynamically populated schema fields -->
+          </div>
         </div>
 
-        <!-- High-Density JSON Output Console -->
+        <!-- Sturdy Architecture Controls Section -->
+        <div class="mt-4 pt-3 border-t border-ide-border/60 px-2">
+          <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider font-mono block mb-2">Architecture Config</span>
+          <div class="flex flex-col gap-2">
+            <div>
+              <label class="text-[10px] text-zinc-500 block">RESOURCE NAME</label>
+              <input type="text" id="cfg-res-name" value="customer" class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-200 focus:outline-none">
+            </div>
+            <div>
+              <label class="text-[10px] text-zinc-500 block">SYNTHETIC MOCKS</label>
+              <input type="number" id="cfg-mock-count" value="25" min="0" max="100" class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-200 focus:outline-none">
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer mt-1">
+              <input type="checkbox" id="cfg-auth" checked class="rounded bg-zinc-900 border-zinc-700 text-indigo-500 focus:ring-0">
+              <span class="text-xs text-zinc-300">API Key Authentication</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="cfg-sqlite" checked class="rounded bg-zinc-900 border-zinc-700 text-indigo-500 focus:ring-0">
+              <span class="text-xs text-zinc-300">SQLite Durable Layer</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- --------------------------------------------------------------------- -->
+    <!-- 2C. CENTER PANE: Multi-Tab Code Editor (VS Code Workbench)            -->
+    <!-- --------------------------------------------------------------------- -->
+    <main class="flex-1 flex flex-col bg-ide-editor overflow-hidden">
+      
+      <!-- Editor Tab Bar (VS Code style) -->
+      <div class="h-9 bg-ide-titlebar border-b border-ide-border flex items-center justify-between px-1 z-10 shrink-0">
+        <!-- Scrollable Tabs -->
+        <div id="editor-tabs" class="flex items-center h-full overflow-x-auto text-xs">
+          <button data-tab-file="app/main.py" class="editor-tab tab-active h-full px-3 flex items-center gap-2 text-zinc-300 border-r border-ide-border transition">
+            <span class="text-blue-400 font-mono">🐍</span>
+            <span>main.py</span>
+            <span class="text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>
+          </button>
+          <button data-tab-file="sdk/client.ts" class="editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition">
+            <span class="text-sky-400 font-mono">🔷</span>
+            <span>client.ts</span>
+            <span class="text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>
+          </button>
+          <button data-tab-file="terraform/main.tf" class="editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition">
+            <span class="text-purple-400 font-mono">☁️</span>
+            <span>main.tf</span>
+            <span class="text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>
+          </button>
+          <button data-tab-file="openapi.json" class="editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition">
+            <span class="text-emerald-400 font-mono">⚡</span>
+            <span>openapi.json</span>
+            <span class="text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>
+          </button>
+        </div>
+
+        <!-- Action Icons on Tab Bar Right -->
+        <div class="flex items-center gap-1 pr-2">
+          <button id="btn-copy-code" class="px-2 py-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1 font-mono transition" title="Copy Current File Code">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <span id="copy-status-text">Copy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Editor Breadcrumbs Bar -->
+      <div class="h-6 bg-ide-editor border-b border-ide-border/50 px-4 flex items-center text-[11px] text-zinc-500 font-mono gap-1.5 shrink-0">
+        <span>workspace</span>
+        <span>&rsaquo;</span>
+        <span id="ec-path-folder" class="text-zinc-400">app</span>
+        <span>&rsaquo;</span>
+        <span id="ec-path-filename" class="text-zinc-300">main.py</span>
+        <span>&rsaquo;</span>
+        <span class="text-indigo-400">@app.get("/customers")</span>
+      </div>
+
+      <!-- Code Surface with Line Numbers Gutter -->
+      <div class="flex-1 flex overflow-hidden bg-ide-editor relative">
+        <!-- Line Numbers Gutter -->
+        <div id="gutter-lines" class="w-12 bg-ide-gutter border-r border-ide-border/60 py-3 line-numbers text-xs font-mono shrink-0 select-none overflow-hidden">
+          <!-- Dynamically populated line numbers -->
+        </div>
+
+        <!-- Code Content Area -->
+        <div class="flex-1 p-3 overflow-auto">
+          <pre id="editor-code" class="code-content text-xs text-zinc-300 font-mono focus:outline-none" tabindex="0"></pre>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- --------------------------------------------------------------------- -->
+    <!-- 2D. RIGHT PANE: Devin / Conductor AI Agent Trace & API Simulator      -->
+    <!-- --------------------------------------------------------------------- -->
+    <aside class="w-96 bg-ide-sidebar border-l border-ide-border flex flex-col shrink-0 overflow-hidden">
+      
+      <!-- Right Pane Header Tabs -->
+      <div class="h-9 bg-ide-titlebar border-b border-ide-border flex items-center justify-between px-2 shrink-0">
+        <div class="flex items-center gap-1">
+          <button id="rp-tab-agent" class="px-2.5 py-1 rounded text-xs font-semibold text-white bg-zinc-800 border border-zinc-700/60 transition flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span>Devin Agent</span>
+          </button>
+          <button id="rp-tab-simulator" class="px-2.5 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 transition flex items-center gap-1.5">
+            <span>Live API Client</span>
+          </button>
+        </div>
+
+        <span class="text-[10px] font-mono text-zinc-500 uppercase">Sub-5ms WASM</span>
+      </div>
+
+      <!-- VIEW 1: Devin / Conductor Autonomous Agent Session View -->
+      <div id="view-agent-panel" class="flex-1 flex flex-col p-3 overflow-y-auto gap-3.5">
+        
+        <!-- Agent Goal Card -->
+        <div class="p-2.5 rounded bg-zinc-900/80 border border-zinc-800 flex flex-col gap-1.5">
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-400">
+            <span class="flex items-center gap-1.5 font-semibold text-indigo-400">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              CURRENT AGENT GOAL
+            </span>
+            <span class="text-emerald-400">AUTONOMOUS</span>
+          </div>
+          <p id="agent-goal-text" class="text-xs text-zinc-200 font-medium">
+            Synthesize zero-downtime microservice, Pydantic models, and typed TypeScript SDK for customer dataset.
+          </p>
+        </div>
+
+        <!-- Devin Task Plan Checklist -->
+        <div class="flex flex-col gap-1.5">
+          <span class="text-[10px] font-mono uppercase text-zinc-500 font-semibold tracking-wider">Engineering Plan</span>
+          <div class="flex flex-col gap-1 text-xs">
+            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span class="text-zinc-200">Ingest data format & infer strict types</span>
+            </div>
+            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span class="text-zinc-200">Detect primary key & foreign keys</span>
+            </div>
+            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span class="text-zinc-200">Compile FastAPI routes & Pydantic v2 schemas</span>
+            </div>
+            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span class="text-zinc-200">Synthesize typed TypeScript client SDK</span>
+            </div>
+            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span class="text-zinc-200">Verify schema diff against breaking changes (0)</span>
+            </div>
+            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span class="text-zinc-200">Mount client-side WASM mock simulator</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Realtime Agent Thinking & Execution Trace -->
+        <div class="flex-1 flex flex-col gap-1.5 min-h-[160px]">
+          <span class="text-[10px] font-mono uppercase text-zinc-500 font-semibold tracking-wider">Agent Execution Trace</span>
+          <div id="agent-trace-log" class="flex-1 p-2.5 rounded bg-ide-terminal border border-zinc-800/80 font-mono text-[11px] text-zinc-400 overflow-y-auto leading-relaxed flex flex-col gap-1">
+            <span class="text-zinc-500">[18:00:01] Initialized APIGen Cognitive Runtime</span>
+            <span class="text-indigo-400">[18:00:02] Analyzing input dataset (5 records detected)</span>
+            <span class="text-zinc-300">[18:00:02] Inferred 7 attributes: id, full_name, email, plan_tier, account_balance, is_active, created_at</span>
+            <span class="text-zinc-300">[18:00:03] Selected 'customer_id' as Primary Key</span>
+            <span class="text-emerald-400">[18:00:03] Generated 25 synthetic records for testing</span>
+            <span class="text-zinc-300">[18:00:03] Generated app/main.py, sdk/client.ts, terraform/main.tf</span>
+            <span class="text-emerald-400">[18:00:04] Workspace build verified: 0 errors, 0 warnings</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- VIEW 2: Live API Client / Simulator (Thunder Client / Postman style inside IDE) -->
+      <div id="view-simulator-panel" class="hidden flex-1 flex flex-col p-3 overflow-y-auto gap-3">
+        
+        <!-- URL & Execution Bar -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+            <span>ENDPOINT REQUEST</span>
+            <span id="sim-db-count" class="text-indigo-400">30 records in memory</span>
+          </div>
+          
+          <div class="flex items-center gap-1.5">
+            <!-- Method Selector -->
+            <select id="sim-method" class="bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold rounded px-2 py-1.5 text-emerald-400 focus:outline-none">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="DELETE">DELETE</option>
+            </select>
+
+            <!-- URL Input -->
+            <input type="text" id="sim-url" value="/customers?limit=5" class="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none">
+
+            <!-- Send Button -->
+            <button id="btn-sim-send" class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-1">
+              <span>Send</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- POST Request Payload Box -->
+        <div id="sim-payload-box" class="hidden flex flex-col gap-1">
+          <div class="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+            <span>JSON REQUEST BODY</span>
+            <button id="btn-reset-payload" class="text-indigo-400 hover:underline">Reset Sample</button>
+          </div>
+          <textarea id="sim-payload-input" rows="3" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-xs font-mono text-zinc-300 focus:outline-none resize-none"></textarea>
+        </div>
+
+        <!-- Response Preview -->
         <div class="flex-1 flex flex-col gap-1.5">
-          <div class="flex items-center justify-between text-[10px] text-gray-400 font-mono">
-            <span>RESPONSE STREAM</span>
-            <span id="sim-latency-badge" class="text-emerald-400 font-semibold font-mono">200 OK (3ms)</span>
+          <div class="flex items-center justify-between text-[10px] font-mono">
+            <span class="text-zinc-400">RESPONSE BODY</span>
+            <div class="flex items-center gap-2">
+              <span id="sim-status-badge" class="text-emerald-400 font-bold">200 OK (2ms)</span>
+              <button id="btn-copy-curl" class="text-zinc-400 hover:text-zinc-200" title="Copy as cURL">
+                📋 cURL
+              </button>
+            </div>
           </div>
-          <pre id="sim-output" class="w-full flex-1 bg-surface-base/95 rounded-xl p-3.5 text-xs font-mono text-gray-300 overflow-auto border border-white/5 max-h-[360px] leading-relaxed"></pre>
-        </div>
-
-        <!-- Panel Footer with Secondary Actions (Evil Martians Pattern) -->
-        <div class="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-400">
-          <span class="flex items-center gap-1.5">
-            <span class="h-1.5 w-1.5 rounded-full bg-brand-400"></span>
-            Mock DB active in memory
-          </span>
-          <button id="btn-reset-db" class="text-xs text-gray-400 hover:text-gray-200 transition font-mono">
-            ↺ Reset State
-          </button>
+          <pre id="sim-response-output" class="flex-1 p-2.5 rounded bg-ide-terminal border border-zinc-800 font-mono text-[11px] text-zinc-300 overflow-auto leading-relaxed max-h-[300px]"></pre>
         </div>
 
       </div>
 
-      <!-- Tab 2: FastAPI & Pydantic v2 Code -->
-      <div id="tab-fastapi" role="tabpanel" class="tab-panel hidden glass-panel rounded-xl p-4 flex-1 flex flex-col">
-        <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/5 text-[11px] text-gray-400 font-mono">
-          <span>app/main.py</span>
-          <span>FastAPI + Pydantic v2 + Scalar Docs</span>
-        </div>
-        <pre id="view-fastapi" class="w-full flex-1 bg-surface-base/95 rounded-xl p-3.5 text-xs font-mono text-gray-300 overflow-auto border border-white/5 max-h-[460px] leading-relaxed"></pre>
-      </div>
+    </aside>
 
-      <!-- Tab 3: TypeScript Client SDK -->
-      <div id="tab-sdk" role="tabpanel" class="tab-panel hidden glass-panel rounded-xl p-4 flex-1 flex flex-col">
-        <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/5 text-[11px] text-gray-400 font-mono">
-          <span>sdk/client.ts</span>
-          <span>Zero-Dependency Native Fetch SDK</span>
-        </div>
-        <pre id="view-sdk" class="w-full flex-1 bg-surface-base/95 rounded-xl p-3.5 text-xs font-mono text-gray-300 overflow-auto border border-white/5 max-h-[460px] leading-relaxed"></pre>
-      </div>
-
-      <!-- Tab 4: Terraform Infrastructure as Code -->
-      <div id="tab-terraform" role="tabpanel" class="tab-panel hidden glass-panel rounded-xl p-4 flex-1 flex flex-col">
-        <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/5 text-[11px] text-gray-400 font-mono">
-          <span>terraform/main.tf</span>
-          <span>Google Cloud Run v2 + Secret Manager IAM</span>
-        </div>
-        <pre id="view-terraform" class="w-full flex-1 bg-surface-base/95 rounded-xl p-3.5 text-xs font-mono text-gray-300 overflow-auto border border-white/5 max-h-[460px] leading-relaxed"></pre>
-      </div>
-
-    </div>
-  </main>
+  </div>
 
   <!-- ========================================================================= -->
-  <!-- Footer Status & Keyboard Navigation Bar                                  -->
+  <!-- 3. BOTTOM PANEL: Integrated Terminal (VS Code Terminal Dock)              -->
   <!-- ========================================================================= -->
-  <footer class="glass-panel mt-auto border-t border-white/5 px-6 py-2 text-xs text-gray-400 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-1.5">
-        <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
-        <span class="text-gray-300 text-xs font-medium">Engine: WASM Reactive Inferrer</span>
+  <div id="terminal-dock" class="h-44 bg-ide-terminal border-t border-ide-border flex flex-col shrink-0">
+    
+    <!-- Terminal Tab Bar -->
+    <div class="h-7 bg-ide-titlebar border-b border-ide-border/80 flex items-center justify-between px-3 text-xs text-zinc-400 shrink-0">
+      <div class="flex items-center gap-3 h-full">
+        <button class="h-full flex items-center gap-1.5 text-zinc-200 font-semibold border-b-2 border-indigo-500 px-1">
+          <span>TERMINAL</span>
+        </button>
+        <button class="h-full flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 px-1">
+          <span>OUTPUT</span>
+        </button>
+        <button class="h-full flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 px-1">
+          <span>PROBLEMS</span>
+          <span class="text-[9px] px-1 rounded-full bg-zinc-800 text-zinc-400">0</span>
+        </button>
       </div>
-      <span class="text-gray-600">|</span>
-      <span class="text-[11px] font-mono text-gray-400">Zero round-trip latency</span>
+
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-mono text-zinc-500">1: bash (apigen-env)</span>
+        <button id="btn-close-terminal" class="p-1 hover:text-zinc-200 text-zinc-500" title="Hide Terminal Panel">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
-    <div class="hidden md:flex items-center gap-4 text-[11px] font-mono text-gray-500">
-      <span><kbd class="px-1.5 py-0.5 rounded bg-white/10 text-gray-300">⌘+Enter</kbd> Execute</span>
-      <span><kbd class="px-1.5 py-0.5 rounded bg-white/10 text-gray-300">⌘+S</kbd> Export ZIP</span>
+    <!-- Terminal Screen Content -->
+    <div id="terminal-screen" class="flex-1 p-2.5 font-mono text-[11px] text-zinc-300 overflow-y-auto leading-relaxed flex flex-col gap-0.5">
+      <div class="text-zinc-500">APIGen Autonomous Development Environment v1.0.0 (WASM Inferrer)</div>
+      <div class="text-emerald-400 flex items-center gap-2">
+        <span class="text-zinc-500">apigen@workspace:~/service$</span>
+        <span>uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload</span>
+      </div>
+      <div class="text-zinc-400">INFO:     Will watch for changes in ['/workspace/app']</div>
+      <div class="text-zinc-400">INFO:     Uvicorn running on <span class="text-indigo-400 underline">http://0.0.0.0:8000</span> (Press CTRL+C to quit)</div>
+      <div class="text-zinc-400">INFO:     Started reloader process [PID 48210] using WatchFiles</div>
+      <div class="text-zinc-400">INFO:     Application startup complete. Live database schema mounted.</div>
+      <div id="terminal-log-stream" class="flex flex-col gap-0.5 pt-0.5">
+        <div class="text-zinc-500">INFO:     127.0.0.1:52134 - "GET /customers?limit=5 HTTP/1.1" 200 OK (2ms)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 4. BOTTOM STATUS BAR (22px VS Code Blue Footer)                          -->
+  <!-- ========================================================================= -->
+  <footer class="h-6 bg-ide-statusbar text-white text-[11px] font-mono px-3 flex items-center justify-between shrink-0 select-none z-30">
+    <!-- Left items -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1 hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer">
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+        </svg>
+        <span>main*</span>
+      </div>
+      <div class="flex items-center gap-1 hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer">
+        <span>✓ 0 errors, 0 warnings</span>
+      </div>
+      <div class="hidden sm:flex items-center gap-1 text-white/80">
+        <span>⚡ APIGen Agent: Active</span>
+      </div>
+    </div>
+
+    <!-- Right items -->
+    <div class="flex items-center gap-3">
+      <span class="hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer hidden md:inline">Ln 1, Col 1</span>
+      <span class="hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer hidden md:inline">Spaces: 4</span>
+      <span class="hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer">UTF-8</span>
+      <span id="sb-lang-indicator" class="hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer font-semibold">Python</span>
+      <span class="hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer bg-emerald-500/30 text-emerald-200">Port: 8000</span>
     </div>
   </footer>
 
   <!-- ========================================================================= -->
-  <!-- Core Studio Client Engine (ES2022)                                        -->
+  <!-- 5. COMMAND PALETTE MODAL (⌘K / Ctrl+K)                                    -->
+  <!-- ========================================================================= -->
+  <div id="cmd-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-start justify-center pt-20">
+    <div class="w-full max-w-lg bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl flex flex-col overflow-hidden">
+      <!-- Search Input -->
+      <div class="p-3 border-b border-zinc-800 flex items-center gap-2">
+        <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="text" id="cmd-input" placeholder="Type a command or search files..." class="w-full bg-transparent text-sm text-zinc-200 focus:outline-none font-sans">
+        <kbd class="text-[10px] font-mono text-zinc-500 px-1.5 py-0.5 bg-zinc-800 rounded">ESC</kbd>
+      </div>
+
+      <!-- Command List -->
+      <div class="max-h-72 overflow-y-auto p-1.5 flex flex-col gap-0.5 text-xs font-sans">
+        <button data-cmd="open-main" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>🐍</span> Open app/main.py</span>
+          <span class="text-zinc-500 font-mono text-[10px]">File</span>
+        </button>
+        <button data-cmd="open-sdk" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>🔷</span> Open sdk/client.ts</span>
+          <span class="text-zinc-500 font-mono text-[10px]">File</span>
+        </button>
+        <button data-cmd="open-tf" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>☁️</span> Open terraform/main.tf</span>
+          <span class="text-zinc-500 font-mono text-[10px]">File</span>
+        </button>
+        <button data-cmd="preset-users" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>👥</span> Load Preset: Customers & Users</span>
+          <span class="text-zinc-500 font-mono text-[10px]">Preset</span>
+        </button>
+        <button data-cmd="preset-inventory" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>📦</span> Load Preset: E-Commerce Inventory</span>
+          <span class="text-zinc-500 font-mono text-[10px]">Preset</span>
+        </button>
+        <button data-cmd="preset-finance" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>💳</span> Load Preset: Financial Transactions</span>
+          <span class="text-zinc-500 font-mono text-[10px]">Preset</span>
+        </button>
+        <button data-cmd="run-sim" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>🚀</span> Execute Live API Request</span>
+          <span class="text-zinc-500 font-mono text-[10px]">Action</span>
+        </button>
+        <button data-cmd="export-zip" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>📦</span> Export Complete Project ZIP</span>
+          <span class="text-zinc-500 font-mono text-[10px]">Export</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 6. RAW DATA MODAL / DRAWER                                                -->
+  <!-- ========================================================================= -->
+  <div id="data-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl flex flex-col p-4 gap-3">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-indigo-400">📊</span>
+          <h3 class="text-sm font-semibold text-zinc-100">Dataset Ingestion & Schema Definition</h3>
+        </div>
+        <button id="btn-close-data-modal" class="text-zinc-500 hover:text-zinc-200 text-sm">✕</button>
+      </div>
+
+      <p class="text-xs text-zinc-400">
+        Paste CSV or JSON records to instantly infer types, generate models, and provision client SDKs.
+      </p>
+
+      <textarea id="modal-raw-input" rows="8" class="w-full bg-zinc-950 border border-zinc-800 rounded p-3 font-mono text-xs text-zinc-200 focus:outline-none"></textarea>
+
+      <div class="flex items-center justify-between pt-1">
+        <span id="modal-record-count" class="text-xs font-mono text-zinc-500">5 records</span>
+        <button id="btn-apply-data" class="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition">
+          Synthesize Architecture
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 7. APPLICATION LOGIC & WORKBENCH ORCHESTRATION                            -->
   <!-- ========================================================================= -->
   <script>
     // Presets
@@ -442,54 +773,62 @@ tx_904,acc_14,890.00,USD,GitHub Enterprise,pending,2024-03-15T12:15:00Z
 tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
     };
 
-    // Application State
+    // State
     let state = {
+      activeFile: 'app/main.py',
+      rawText: PRESETS.customers,
       records: [],
       fields: [],
       resourceName: 'customer',
       mockCount: 25,
       authEnabled: true,
       sqliteEnabled: true,
-      activeTab: 'tab-playground',
       currentMethod: 'GET',
       simulatedDb: {},
-      allRecords: []
+      allRecords: [],
+      files: {}
     };
 
     // DOM Elements
-    const rawInput = document.getElementById('raw-input');
-    const recordsCounter = document.getElementById('records-counter');
-    const resourceNameInput = document.getElementById('resource-name');
-    const mockCountInput = document.getElementById('mock-count');
-    const authToggle = document.getElementById('auth-toggle');
-    const sqliteToggle = document.getElementById('sqlite-toggle');
-    const schemaTbody = document.getElementById('schema-tbody');
-    const dropzone = document.getElementById('dropzone');
-    const fileUploader = document.getElementById('file-uploader');
-    const btnGenerate = document.getElementById('btn-generate');
-    const btnExportZip = document.getElementById('btn-export-zip');
-    const btnCopyTab = document.getElementById('btn-copy-tab');
-    const copyLabel = document.getElementById('copy-label');
+    const editorCode = document.getElementById('editor-code');
+    const gutterLines = document.getElementById('gutter-lines');
+    const breadcrumbRes = document.getElementById('breadcrumb-res');
+    const breadcrumbFile = document.getElementById('breadcrumb-file');
+    const ecPathFolder = document.getElementById('ec-path-folder');
+    const ecPathFilename = document.getElementById('ec-path-filename');
+    const sbLangIndicator = document.getElementById('sb-lang-indicator');
+    const sidebarFieldCount = document.getElementById('sidebar-field-count');
+    const sidebarSchemaList = document.getElementById('sidebar-schema-list');
+    const terminalLogStream = document.getElementById('terminal-log-stream');
+    const terminalDock = document.getElementById('terminal-dock');
+    const agentTraceLog = document.getElementById('agent-trace-log');
+    const agentGoalText = document.getElementById('agent-goal-text');
+
+    // Controls
+    const cfgResName = document.getElementById('cfg-res-name');
+    const cfgMockCount = document.getElementById('cfg-mock-count');
+    const cfgAuth = document.getElementById('cfg-auth');
+    const cfgSqlite = document.getElementById('cfg-sqlite');
+
+    // Simulator
+    const simMethod = document.getElementById('sim-method');
+    const simUrl = document.getElementById('sim-url');
+    const btnSimSend = document.getElementById('btn-sim-send');
+    const simPayloadBox = document.getElementById('sim-payload-box');
+    const simPayloadInput = document.getElementById('sim-payload-input');
+    const simStatusBadge = document.getElementById('sim-status-badge');
+    const simResponseOutput = document.getElementById('sim-response-output');
+    const simDbCount = document.getElementById('sim-db-count');
     const btnCopyCurl = document.getElementById('btn-copy-curl');
 
-    // Simulator Elements
-    const simEndpoint = document.getElementById('sim-endpoint');
-    const btnSimSend = document.getElementById('btn-sim-send');
-    const simOutput = document.getElementById('sim-output');
-    const simLatencyBadge = document.getElementById('sim-latency-badge');
-    const simRecordsTotal = document.getElementById('sim-records-total');
-    const postBodyContainer = document.getElementById('post-body-container');
-    const simPostBody = document.getElementById('sim-post-body');
-    const btnResetDb = document.getElementById('btn-reset-db');
-    const btnResetPayload = document.getElementById('btn-reset-payload');
-
-    // View Elements
-    const viewFastapi = document.getElementById('view-fastapi');
-    const viewSdk = document.getElementById('view-sdk');
-    const viewTerraform = document.getElementById('view-terraform');
+    // Modals
+    const cmdModal = document.getElementById('cmd-modal');
+    const cmdInput = document.getElementById('cmd-input');
+    const dataModal = document.getElementById('data-modal');
+    const modalRawInput = document.getElementById('modal-raw-input');
 
     // -------------------------------------------------------------------------
-    // Parser & Type Inference
+    // Parser & Inferrer
     // -------------------------------------------------------------------------
     function parseRecords(text) {
       text = text.trim();
@@ -499,9 +838,7 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
         try {
           const parsed = JSON.parse(text);
           return Array.isArray(parsed) ? parsed : [parsed];
-        } catch (e) {
-          // Fall through to CSV
-        }
+        } catch (e) {}
       }
 
       const lines = text.split('\n');
@@ -564,21 +901,16 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
           pyType,
           oapiType,
           tsType,
-          isPk,
-          nullable: false
+          isPk
         });
       }
 
       if (!fields.some(f => f.isPk) && fields.length > 0) {
         fields[0].isPk = true;
       }
-
       return fields;
     }
 
-    // -------------------------------------------------------------------------
-    // Synthetic Mocks Generator
-    // -------------------------------------------------------------------------
     function generateSyntheticMocks(fields, seedRecords, count) {
       const all = [...seedRecords];
       const pkField = fields.find(f => f.isPk) || fields[0];
@@ -589,15 +921,15 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
           if (f.isPk) {
             mock[f.name] = f.pyType === 'int' ? i + 100 : `${f.name.toUpperCase()}_${i}`;
           } else if (f.name.includes('email')) {
-            mock[f.name] = `user${i}@enterprise.io`;
+            mock[f.name] = `user${i}@acme-corp.io`;
           } else if (f.name.includes('amount') || f.name.includes('price') || f.name.includes('balance')) {
-            mock[f.name] = +(19.50 + (i * 4.25)).toFixed(2);
+            mock[f.name] = +(29.99 + (i * 3.75)).toFixed(2);
           } else if (f.pyType === 'int') {
-            mock[f.name] = i * 5;
+            mock[f.name] = i * 4;
           } else if (f.pyType === 'bool') {
             mock[f.name] = i % 2 === 0;
           } else {
-            mock[f.name] = `Synthetic ${f.name} ${i}`;
+            mock[f.name] = `Sample ${f.name} ${i}`;
           }
         });
         all.push(mock);
@@ -606,14 +938,15 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
     }
 
     // -------------------------------------------------------------------------
-    // Code Generators
+    // Code Synthesis Engine
     // -------------------------------------------------------------------------
-    function buildFastApiCode(resourceName, fields, records, authEnabled) {
+    function generateWorkspaceFiles(resourceName, fields, records, authEnabled) {
       const resTitle = resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
       const plural = resourceName.endsWith('s') ? resourceName : resourceName + 's';
-      const pk = (fields.find(f => f.isPk) || fields[0]).name;
+      const pk = (fields.find(f => f.isPk) || fields[0])?.name || 'id';
 
-      const authBlock = authEnabled ? `
+      // 1. app/main.py
+      const authSnippet = authEnabled ? `
 from fastapi.security import APIKeyHeader
 from fastapi import Security, Depends
 
@@ -628,8 +961,8 @@ def verify_api_key(api_key: str = Security(api_key_header)):
 auth_dep = [Depends(verify_api_key)]
 ` : `auth_dep = []`;
 
-      return `"""
-${resTitle} Microservice API.
+      const mainPy = `"""
+${resTitle} Autonomous Microservice API.
 Generated by APIGen Blueprint Engine.
 """
 
@@ -637,9 +970,8 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict
-${authBlock}
+${authSnippet}
 
 app = FastAPI(
     title="${resTitle} Service",
@@ -656,19 +988,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/scalar", response_class=HTMLResponse, include_in_schema=False)
-def scalar_docs():
-    return """
-    <!doctype html>
-    <html>
-      <head><title>${resTitle} API Reference</title></head>
-      <body>
-        <script id="api-reference" data-url="/openapi.json"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
-      </body>
-    </html>
-    """
-
 class ${resTitle}Response(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 ${fields.map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType}`).join('\n')}
@@ -676,7 +995,8 @@ ${fields.map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyT
 class ${resTitle}Create(BaseModel):
 ${fields.filter(f => !f.isPk).map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType}`).join('\n')}
 
-db = {str(r['${pk}']): r for r in ${JSON.stringify(records, null, 2)}}
+# In-memory durable store
+db = {str(r['${pk}']): r for r in ${JSON.stringify(records.slice(0, 5), null, 2)}}
 
 @app.get("/healthz", tags=["System"])
 def health():
@@ -698,19 +1018,27 @@ def get_${resourceName}(id: str):
 
 @app.post("/${plural}", response_model=${resTitle}Response, status_code=201, dependencies=auth_dep)
 def create_${resourceName}(payload: ${resTitle}Create):
-    new_id = f"ID_{len(db) + 1}"
+    new_id = f"ID_{len(db) + 101}"
     record = payload.model_dump()
     record["${pk}"] = new_id
     db[str(new_id)] = record
     return record
 `;
-    }
 
-    function buildTypeScriptSdk(resourceName, fields, plural, authEnabled) {
-      const resTitle = resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
-      const pk = (fields.find(f => f.isPk) || fields[0]).name;
+      // 2. app/models.py
+      const modelsPy = `from pydantic import BaseModel, ConfigDict
+from typing import Optional
+from datetime import datetime
 
-      return `/**
+class ${resTitle}Base(BaseModel):
+${fields.map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType}`).join('\n')}
+
+class ${resTitle}InDB(${resTitle}Base):
+    model_config = ConfigDict(from_attributes=True)
+`;
+
+      // 3. sdk/client.ts
+      const clientTs = `/**
  * ${resTitle} Typed Client SDK.
  * Generated by APIGen Studio.
  * Zero external dependencies (uses native fetch).
@@ -776,10 +1104,9 @@ export class ${resTitle}Client {
   }
 }
 `;
-    }
 
-    function buildTerraform(resourceName, authEnabled) {
-      return `terraform {
+      // 4. terraform/main.tf
+      const mainTf = `terraform {
   required_version = ">= 1.5.0"
   required_providers {
     google = {
@@ -818,44 +1145,130 @@ resource "google_cloud_run_v2_service" "${resourceName}_service" {
   }
 }
 `;
+
+      // 5. openapi.json
+      const openapiJson = JSON.stringify({
+        openapi: "3.1.0",
+        info: {
+          title: `${resTitle} Service API`,
+          version: "1.0.0",
+          description: "Auto-generated by APIGen Autonomous Fabric"
+        },
+        paths: {
+          [`/${plural}`]: {
+            get: {
+              summary: `List ${plural}`,
+              parameters: [
+                { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
+                { name: "offset", in: "query", schema: { type: "integer", default: 0 } },
+                { name: "q", in: "query", schema: { type: "string" } }
+              ],
+              responses: { "200": { description: "Successful response" } }
+            },
+            post: {
+              summary: `Create ${resourceName}`,
+              responses: { "201": { description: "Resource created" } }
+            }
+          }
+        }
+      }, null, 2);
+
+      // 6. Dockerfile
+      const dockerfile = `FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8080
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+`;
+
+      // 7. README.md
+      const readmeMd = `# ${resTitle} Autonomous Microservice
+
+Generated with APIGen Studio.
+
+## Quickstart
+
+\`\`\`bash
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+\`\`\`
+
+Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
+`;
+
+      return {
+        'app/main.py': mainPy,
+        'app/models.py': modelsPy,
+        'sdk/client.ts': clientTs,
+        'terraform/main.tf': mainTf,
+        'data/dataset.json': JSON.stringify(records, null, 2),
+        'openapi.json': openapiJson,
+        'Dockerfile': dockerfile,
+        'README.md': readmeMd
+      };
     }
 
     // -------------------------------------------------------------------------
-    // Render Functions (Information Density View)
+    // Render Workbench
     // -------------------------------------------------------------------------
-    function renderSchemaTable() {
-      if (!state.fields.length) {
-        schemaTbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-500 font-sans">No data loaded yet</td></tr>`;
-        return;
-      }
+    function renderEditor() {
+      const content = state.files[state.activeFile] || '# File empty';
+      editorCode.textContent = content;
 
-      schemaTbody.innerHTML = state.fields.map(f => `
-        <tr class="hover:bg-white/[0.02] transition">
-          <td class="p-2 font-medium text-gray-200 flex items-center gap-1.5">
+      // Update Line Numbers Gutter
+      const lineCount = content.split('\n').length;
+      let gutterHtml = '';
+      for (let i = 1; i <= lineCount; i++) {
+        gutterHtml += `<div>${i}</div>`;
+      }
+      gutterLines.innerHTML = gutterHtml;
+
+      // Update Breadcrumbs
+      const parts = state.activeFile.split('/');
+      if (parts.length > 1) {
+        ecPathFolder.textContent = parts[0];
+        ecPathFilename.textContent = parts[1];
+      } else {
+        ecPathFolder.textContent = 'root';
+        ecPathFilename.textContent = parts[0];
+      }
+      breadcrumbFile.textContent = state.activeFile;
+
+      // Language indicator
+      if (state.activeFile.endsWith('.py')) sbLangIndicator.textContent = 'Python';
+      else if (state.activeFile.endsWith('.ts')) sbLangIndicator.textContent = 'TypeScript';
+      else if (state.activeFile.endsWith('.tf')) sbLangIndicator.textContent = 'Terraform HCL';
+      else if (state.activeFile.endsWith('.json')) sbLangIndicator.textContent = 'JSON';
+      else if (state.activeFile.endsWith('.md')) sbLangIndicator.textContent = 'Markdown';
+      else sbLangIndicator.textContent = 'Plain Text';
+    }
+
+    function renderSidebarSchema() {
+      sidebarFieldCount.textContent = `${state.fields.length} fields`;
+      sidebarSchemaList.innerHTML = state.fields.map(f => `
+        <div class="flex items-center justify-between p-1 rounded hover:bg-zinc-800/60 transition">
+          <span class="text-zinc-300 flex items-center gap-1">
             ${f.name}
-            ${f.isPk ? '<span class="text-[8px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">PK</span>' : ''}
-          </td>
-          <td class="p-2 text-brand-400">${f.pyType}</td>
-          <td class="p-2 text-gray-400">${f.oapiType}</td>
-          <td class="p-2 text-right">
-            ${f.isPk ? '<span class="text-[9px] text-amber-400">Primary Key</span>' : '<span class="text-[9px] text-gray-500">Attribute</span>'}
-          </td>
-        </tr>
+            ${f.isPk ? '<span class="text-[8px] px-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">PK</span>' : ''}
+          </span>
+          <span class="text-indigo-400 text-[10px]">${f.pyType}</span>
+        </div>
       `).join('');
     }
 
     function updateWorkspace() {
-      state.resourceName = resourceNameInput.value.trim() || 'item';
-      state.mockCount = parseInt(mockCountInput.value, 10) || 0;
-      state.authEnabled = authToggle.checked;
-      state.sqliteEnabled = sqliteToggle.checked;
+      state.resourceName = cfgResName.value.trim() || 'item';
+      state.mockCount = parseInt(cfgMockCount.value, 10) || 0;
+      state.authEnabled = cfgAuth.checked;
+      state.sqliteEnabled = cfgSqlite.checked;
 
-      const raw = rawInput.value.trim();
-      state.records = parseRecords(raw);
-      recordsCounter.textContent = `${state.records.length} records parsed`;
+      breadcrumbRes.textContent = `${state.resourceName}-service`;
 
+      state.records = parseRecords(state.rawText);
       state.fields = inferSchema(state.records);
-      renderSchemaTable();
+      renderSidebarSchema();
 
       if (!state.records.length) return;
 
@@ -867,40 +1280,37 @@ resource "google_cloud_run_v2_service" "${resourceName}_service" {
       });
 
       const plural = state.resourceName.endsWith('s') ? state.resourceName : state.resourceName + 's';
-      simEndpoint.value = `/${plural}?limit=5`;
-      simRecordsTotal.textContent = `${state.allRecords.length} items stored`;
+      simUrl.value = `/${plural}?limit=5`;
+      simDbCount.textContent = `${state.allRecords.length} records in memory`;
 
-      // Code generations
-      const fastApiCode = buildFastApiCode(state.resourceName, state.fields, state.allRecords, state.authEnabled);
-      const sdkCode = buildTypeScriptSdk(state.resourceName, state.fields, plural, state.authEnabled);
-      const tfCode = buildTerraform(state.resourceName, state.authEnabled);
+      // Generate all files
+      state.files = generateWorkspaceFiles(state.resourceName, state.fields, state.allRecords, state.authEnabled);
 
-      viewFastapi.textContent = fastApiCode;
-      viewSdk.textContent = sdkCode;
-      viewTerraform.textContent = tfCode;
+      // Render Editor
+      renderEditor();
 
-      // Reset simulated POST body template
-      resetSamplePostBody();
+      // Reset POST body sample
+      resetSamplePayload();
 
-      // Run live simulation
+      // Run live simulation to prime simulator
       executeSimulation();
     }
 
-    function resetSamplePostBody() {
+    function resetSamplePayload() {
       const pkField = (state.fields.find(f => f.isPk) || state.fields[0])?.name;
-      const sampleCreate = {};
+      const sample = {};
       state.fields.filter(f => f.name !== pkField).forEach(f => {
-        sampleCreate[f.name] = f.tsType === 'number' ? 99.5 : f.tsType === 'boolean' ? true : `New ${f.name}`;
+        sample[f.name] = f.tsType === 'number' ? 49.99 : f.tsType === 'boolean' ? true : `New ${f.name}`;
       });
-      simPostBody.value = JSON.stringify(sampleCreate, null, 2);
+      simPayloadInput.value = JSON.stringify(sample, null, 2);
     }
 
     // -------------------------------------------------------------------------
-    // Simulator Execution Engine (Immediate Context)
+    // Simulator Execution Engine
     // -------------------------------------------------------------------------
     function executeSimulation() {
-      const method = state.currentMethod;
-      const endpoint = simEndpoint.value.trim();
+      const method = simMethod.value;
+      const endpoint = simUrl.value.trim();
       const startTime = performance.now();
 
       const plural = state.resourceName.endsWith('s') ? state.resourceName : state.resourceName + 's';
@@ -936,22 +1346,18 @@ resource "google_cloud_run_v2_service" "${resourceName}_service" {
 
             response = {
               items: items.slice(offset, offset + limit),
-              pagination: {
-                total: items.length,
-                limit,
-                offset
-              }
+              pagination: { total: items.length, limit, offset }
             };
           }
         } else if (method === 'POST') {
           try {
-            const payload = JSON.parse(simPostBody.value);
+            const payload = JSON.parse(simPayloadInput.value);
             const newId = `ID_${Object.keys(state.simulatedDb).length + 101}`;
             payload[pkField] = newId;
             state.simulatedDb[newId] = payload;
             status = 201;
             response = payload;
-            simRecordsTotal.textContent = `${Object.keys(state.simulatedDb).length} items stored`;
+            simDbCount.textContent = `${Object.keys(state.simulatedDb).length} records in memory`;
           } catch (e) {
             status = 422;
             response = { detail: "Malformed JSON payload in request body" };
@@ -962,7 +1368,7 @@ resource "google_cloud_run_v2_service" "${resourceName}_service" {
             delete state.simulatedDb[singleMatch[1]];
             status = 204;
             response = { status: "deleted" };
-            simRecordsTotal.textContent = `${Object.keys(state.simulatedDb).length} items stored`;
+            simDbCount.textContent = `${Object.keys(state.simulatedDb).length} records in memory`;
           } else {
             status = 404;
             response = { detail: "Item not found" };
@@ -970,183 +1376,232 @@ resource "google_cloud_run_v2_service" "${resourceName}_service" {
         }
       } else {
         status = 404;
-        response = { detail: "Path not found in OpenAPI spec" };
+        response = { detail: "Endpoint path not found" };
       }
 
-      const duration = Math.round(performance.now() - startTime + Math.random() * 3);
-      simLatencyBadge.textContent = `${status} ${status === 201 ? 'CREATED' : status === 204 ? 'NO CONTENT' : status === 404 ? 'NOT FOUND' : 'OK'} (${duration}ms)`;
-      simLatencyBadge.className = status >= 400 ? 'text-rose-400 font-mono font-semibold' : 'text-emerald-400 font-mono font-semibold';
-      simOutput.textContent = JSON.stringify(response, null, 2);
+      const duration = Math.round(performance.now() - startTime + Math.random() * 2);
+      simStatusBadge.textContent = `${status} ${status === 201 ? 'CREATED' : status === 204 ? 'NO CONTENT' : status === 404 ? 'NOT FOUND' : 'OK'} (${duration}ms)`;
+      simStatusBadge.className = status >= 400 ? 'text-rose-400 font-mono font-bold' : 'text-emerald-400 font-mono font-bold';
+      simResponseOutput.textContent = JSON.stringify(response, null, 2);
+
+      // Append log to terminal
+      const logEntry = document.createElement('div');
+      logEntry.className = 'text-zinc-400';
+      logEntry.textContent = `INFO:     127.0.0.1:52134 - "${method} ${endpoint} HTTP/1.1" ${status} (${duration}ms)`;
+      terminalLogStream.appendChild(logEntry);
+      terminalDock.querySelector('#terminal-screen').scrollTop = 99999;
     }
 
     // -------------------------------------------------------------------------
-    // Method Segmented Controls (Sturdy Martian Pattern)
+    // Event Listeners & Wiring
     // -------------------------------------------------------------------------
-    document.querySelectorAll('.method-btn').forEach(btn => {
+
+    // File Selection in Explorer
+    document.querySelectorAll('.file-item').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.method-btn').forEach(b => {
-          b.className = 'method-btn px-2.5 py-1 rounded-md text-gray-400 hover:text-gray-200 transition';
+        document.querySelectorAll('.file-item').forEach(b => {
+          b.classList.remove('bg-zinc-800/80', 'text-zinc-200');
+          b.classList.add('text-zinc-400');
         });
+        btn.classList.add('bg-zinc-800/80', 'text-zinc-200');
+        btn.classList.remove('text-zinc-400');
 
-        const m = btn.dataset.method;
-        state.currentMethod = m;
+        const file = btn.dataset.file;
+        openFileInEditor(file);
+      });
+    });
 
-        if (m === 'GET') {
-          btn.className = 'method-btn px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 transition';
-          postBodyContainer.classList.add('hidden');
-        } else if (m === 'POST') {
-          btn.className = 'method-btn px-2.5 py-1 rounded-md bg-blue-500/20 text-blue-400 transition';
-          postBodyContainer.classList.remove('hidden');
-        } else if (m === 'DELETE') {
-          btn.className = 'method-btn px-2.5 py-1 rounded-md bg-rose-500/20 text-rose-400 transition';
-          postBodyContainer.classList.add('hidden');
+    function openFileInEditor(file) {
+      state.activeFile = file;
+      
+      // Update Tab Bar
+      let tabExists = false;
+      document.querySelectorAll('.editor-tab').forEach(t => {
+        if (t.dataset.tabFile === file) {
+          tabExists = true;
+          t.className = 'editor-tab tab-active h-full px-3 flex items-center gap-2 text-zinc-300 border-r border-ide-border transition';
+        } else {
+          t.className = 'editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition';
         }
       });
-    });
 
-    // -------------------------------------------------------------------------
-    // Tab Navigation
-    // -------------------------------------------------------------------------
-    document.querySelectorAll('.tab-trigger').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab-trigger').forEach(t => {
-          t.classList.remove('bg-white/10', 'text-white');
-          t.classList.add('text-gray-400');
-          t.setAttribute('aria-selected', 'false');
-        });
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      renderEditor();
+    }
 
-        tab.classList.add('bg-white/10', 'text-white');
-        tab.classList.remove('text-gray-400');
-        tab.setAttribute('aria-selected', 'true');
-        
-        state.activeTab = tab.dataset.tab;
-        document.getElementById(state.activeTab).classList.remove('hidden');
+    // Tab Clicks
+    document.querySelectorAll('.editor-tab').forEach(t => {
+      t.addEventListener('click', () => {
+        openFileInEditor(t.dataset.tabFile);
       });
     });
 
-    // Copy Code
-    btnCopyTab.addEventListener('click', () => {
-      let text = '';
-      if (state.activeTab === 'tab-fastapi') text = viewFastapi.textContent;
-      else if (state.activeTab === 'tab-sdk') text = viewSdk.textContent;
-      else if (state.activeTab === 'tab-terraform') text = viewTerraform.textContent;
-      else text = simOutput.textContent;
-
-      navigator.clipboard.writeText(text);
-      copyLabel.textContent = 'Copied!';
-      setTimeout(() => { copyLabel.textContent = 'Copy Code'; }, 1600);
+    // Preset Buttons
+    document.getElementById('preset-customers').addEventListener('click', () => {
+      state.rawText = PRESETS.customers;
+      cfgResName.value = 'customer';
+      agentGoalText.textContent = "Synthesize zero-downtime microservice, Pydantic models, and typed TypeScript SDK for customer dataset.";
+      updateWorkspace();
+    });
+    document.getElementById('preset-inventory').addEventListener('click', () => {
+      state.rawText = PRESETS.inventory;
+      cfgResName.value = 'product';
+      agentGoalText.textContent = "Synthesize e-commerce inventory service with SKU tracking, stock replenishment, and TypeScript client.";
+      updateWorkspace();
+    });
+    document.getElementById('preset-transactions').addEventListener('click', () => {
+      state.rawText = PRESETS.transactions;
+      cfgResName.value = 'transaction';
+      agentGoalText.textContent = "Synthesize PCI-ready financial ledger microservice with currency formatting and Cloud Run deployment.";
+      updateWorkspace();
     });
 
-    // Copy cURL Bridge (Evil Martians Broad Context Bridge)
+    // Right Pane Tab Switching (Devin Agent vs Live API Client)
+    const rpTabAgent = document.getElementById('rp-tab-agent');
+    const rpTabSimulator = document.getElementById('rp-tab-simulator');
+    const viewAgentPanel = document.getElementById('view-agent-panel');
+    const viewSimulatorPanel = document.getElementById('view-simulator-panel');
+
+    rpTabAgent.addEventListener('click', () => {
+      rpTabAgent.className = 'px-2.5 py-1 rounded text-xs font-semibold text-white bg-zinc-800 border border-zinc-700/60 transition flex items-center gap-1.5';
+      rpTabSimulator.className = 'px-2.5 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 transition flex items-center gap-1.5';
+      viewAgentPanel.classList.remove('hidden');
+      viewSimulatorPanel.classList.add('hidden');
+    });
+
+    rpTabSimulator.addEventListener('click', () => {
+      rpTabSimulator.className = 'px-2.5 py-1 rounded text-xs font-semibold text-white bg-zinc-800 border border-zinc-700/60 transition flex items-center gap-1.5';
+      rpTabAgent.className = 'px-2.5 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 transition flex items-center gap-1.5';
+      viewSimulatorPanel.classList.remove('hidden');
+      viewAgentPanel.classList.add('hidden');
+    });
+
+    // Activity Rail Button actions
+    document.getElementById('act-btn-explorer').addEventListener('click', () => {
+      document.getElementById('sidebar-container').classList.toggle('hidden');
+    });
+    document.getElementById('act-btn-agent').addEventListener('click', () => {
+      rpTabAgent.click();
+    });
+    document.getElementById('act-btn-simulator').addEventListener('click', () => {
+      rpTabSimulator.click();
+    });
+    document.getElementById('act-btn-data').addEventListener('click', () => {
+      dataModal.classList.remove('hidden');
+      modalRawInput.value = state.rawText;
+    });
+
+    // Terminal Toggle
+    document.getElementById('btn-toggle-terminal').addEventListener('click', () => {
+      terminalDock.classList.toggle('hidden');
+    });
+    document.getElementById('btn-close-terminal').addEventListener('click', () => {
+      terminalDock.classList.add('hidden');
+    });
+
+    // Simulator Method Change
+    simMethod.addEventListener('change', () => {
+      if (simMethod.value === 'POST') {
+        simPayloadBox.classList.remove('hidden');
+      } else {
+        simPayloadBox.classList.add('hidden');
+      }
+    });
+
+    btnSimSend.addEventListener('click', executeSimulation);
+
+    // Copy Code Button
+    document.getElementById('btn-copy-code').addEventListener('click', () => {
+      const code = state.files[state.activeFile] || '';
+      navigator.clipboard.writeText(code);
+      const textSpan = document.getElementById('copy-status-text');
+      textSpan.textContent = 'Copied!';
+      setTimeout(() => { textSpan.textContent = 'Copy'; }, 1500);
+    });
+
+    // Copy as cURL
     btnCopyCurl.addEventListener('click', () => {
-      const endpoint = simEndpoint.value.trim();
-      const method = state.currentMethod;
-      const curlCmd = `curl -X ${method} "http://localhost:8080${endpoint}" -H "X-API-Key: default-dev-secret-key"${method === 'POST' ? ` -H "Content-Type: application/json" -d '${simPostBody.value.replace(/\n/g, "")}'` : ''}`;
-      navigator.clipboard.writeText(curlCmd);
-      btnCopyCurl.innerHTML = '<span>✓</span> Copied cURL!';
-      setTimeout(() => {
-        btnCopyCurl.innerHTML = '<span>📋</span> Copy as cURL';
-      }, 1600);
+      const endpoint = simUrl.value.trim();
+      const method = simMethod.value;
+      const curl = `curl -X ${method} "http://localhost:8000${endpoint}" -H "X-API-Key: prod-secret-key-change-me"${method === 'POST' ? ` -H "Content-Type: application/json" -d '${simPayloadInput.value.replace(/\n/g, "")}'` : ''}`;
+      navigator.clipboard.writeText(curl);
+      btnCopyCurl.textContent = '✓ Copied!';
+      setTimeout(() => { btnCopyCurl.textContent = '📋 cURL'; }, 1500);
     });
 
-    // Export .zip
-    btnExportZip.addEventListener('click', async () => {
+    // Command Palette Modal
+    const btnCmdPalette = document.getElementById('btn-cmd-palette');
+    btnCmdPalette.addEventListener('click', () => {
+      cmdModal.classList.remove('hidden');
+      cmdInput.value = '';
+      cmdInput.focus();
+    });
+
+    document.querySelectorAll('.cmd-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const cmd = item.dataset.cmd;
+        cmdModal.classList.add('hidden');
+        if (cmd === 'open-main') openFileInEditor('app/main.py');
+        else if (cmd === 'open-sdk') openFileInEditor('sdk/client.ts');
+        else if (cmd === 'open-tf') openFileInEditor('terraform/main.tf');
+        else if (cmd === 'preset-users') document.getElementById('preset-customers').click();
+        else if (cmd === 'preset-inventory') document.getElementById('preset-inventory').click();
+        else if (cmd === 'preset-finance') document.getElementById('preset-transactions').click();
+        else if (cmd === 'run-sim') { rpTabSimulator.click(); executeSimulation(); }
+        else if (cmd === 'export-zip') exportZipBundle();
+      });
+    });
+
+    // Close Modals on ESC or outside click
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        cmdModal.classList.toggle('hidden');
+        if (!cmdModal.classList.contains('hidden')) cmdInput.focus();
+      }
+      if (e.key === 'Escape') {
+        cmdModal.classList.add('hidden');
+        dataModal.classList.add('hidden');
+      }
+    });
+
+    cmdModal.addEventListener('click', (e) => {
+      if (e.target === cmdModal) cmdModal.classList.add('hidden');
+    });
+    dataModal.addEventListener('click', (e) => {
+      if (e.target === dataModal) dataModal.classList.add('hidden');
+    });
+    document.getElementById('btn-close-data-modal').addEventListener('click', () => {
+      dataModal.classList.add('hidden');
+    });
+
+    document.getElementById('btn-apply-data').addEventListener('click', () => {
+      state.rawText = modalRawInput.value.trim();
+      dataModal.classList.add('hidden');
+      updateWorkspace();
+    });
+
+    // Export .zip Bundle
+    async function exportZipBundle() {
       const zip = new JSZip();
       const res = state.resourceName;
 
-      zip.file("app/main.py", viewFastapi.textContent);
-      zip.file("app/__init__.py", "");
-      zip.file("sdk/client.ts", viewSdk.textContent);
-      zip.file("terraform/main.tf", viewTerraform.textContent);
+      Object.entries(state.files).forEach(([path, content]) => {
+        zip.file(path, content);
+      });
+
       zip.file("requirements.txt", "fastapi>=0.110.0\nuvicorn>=0.29.0\npydantic>=2.7.0\npytest>=8.0.0\nhttpx>=0.27.0\n");
-      zip.file("Dockerfile", "FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nCMD [\"uvicorn\", \"app.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8080\"]\n");
-      zip.file("README.md", `# ${res.toUpperCase()} API\n\nAuto-generated microservice by APIGen Studio.\n\n\`\`\`bash\npip install -r requirements.txt\nuvicorn app.main:app --reload\n\`\`\`\n`);
 
       const blob = await zip.generateAsync({ type: "blob" });
       const dlLink = document.createElement("a");
       dlLink.href = URL.createObjectURL(blob);
-      dlLink.download = `${res}-microservice-bundle.zip`;
+      dlLink.download = `${res}-microservice-workspace.zip`;
       dlLink.click();
-    });
-
-    // Preset Handlers
-    document.getElementById('preset-customers').addEventListener('click', () => {
-      rawInput.value = PRESETS.customers;
-      resourceNameInput.value = 'customer';
-      updateWorkspace();
-    });
-    document.getElementById('preset-inventory').addEventListener('click', () => {
-      rawInput.value = PRESETS.inventory;
-      resourceNameInput.value = 'product';
-      updateWorkspace();
-    });
-    document.getElementById('preset-transactions').addEventListener('click', () => {
-      rawInput.value = PRESETS.transactions;
-      resourceNameInput.value = 'transaction';
-      updateWorkspace();
-    });
-
-    // Drag & Drop
-    ['dragenter', 'dragover'].forEach(ev => {
-      dropzone.addEventListener(ev, (e) => {
-        e.preventDefault();
-        dropzone.classList.add('drop-active');
-      }, false);
-    });
-    ['dragleave', 'drop'].forEach(ev => {
-      dropzone.addEventListener(ev, (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('drop-active');
-      }, false);
-    });
-
-    dropzone.addEventListener('drop', (e) => {
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
-    });
-
-    fileUploader.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) handleFile(file);
-    });
-
-    function handleFile(file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        rawInput.value = e.target.result;
-        resourceNameInput.value = file.name.replace(/\.[^/.]+$/, "").replace(/s$/, "");
-        updateWorkspace();
-      };
-      reader.readAsText(file);
     }
 
-    // Input Listeners
-    rawInput.addEventListener('input', updateWorkspace);
-    resourceNameInput.addEventListener('input', updateWorkspace);
-    mockCountInput.addEventListener('input', updateWorkspace);
-    authToggle.addEventListener('change', updateWorkspace);
-    sqliteToggle.addEventListener('change', updateWorkspace);
-    btnGenerate.addEventListener('click', updateWorkspace);
-    btnSimSend.addEventListener('click', executeSimulation);
-    btnResetPayload.addEventListener('click', resetSamplePostBody);
-    btnResetDb.addEventListener('click', updateWorkspace);
+    document.getElementById('btn-top-export').addEventListener('click', exportZipBundle);
 
-    // Keyboard Shortcuts (Broad Context)
-    window.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        executeSimulation();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        btnExportZip.click();
-      }
-    });
-
-    // Initial Auto-Load
+    // Initial Load
     window.addEventListener('DOMContentLoaded', () => {
-      rawInput.value = PRESETS.customers;
       updateWorkspace();
     });
   </script>
