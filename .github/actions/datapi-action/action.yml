@@ -1,0 +1,193 @@
+name: 'datapi Turnkey API Generator & Contract Gate'
+description: 'Continuous Data-as-Code pipeline: inspect schema, diff breaking changes with PR comments, generate FastAPI & OpenAPI 3.1, and run Pytest contract tests.'
+author: 'datapi'
+
+inputs:
+  data-file:
+    description: 'Path to the primary raw data file (.csv, .json, .sqlite, .parquet)'
+    required: true
+  output-dir:
+    description: 'Directory where the generated API microservice codebase will be emitted'
+    required: false
+    default: './generated-api'
+  fail-on-breaking:
+    description: 'Fail the workflow if breaking schema drift is detected against old-schema'
+    required: false
+    default: 'true'
+  auth:
+    description: 'Enable API Key authentication (X-API-Key header)'
+    required: false
+    default: 'false'
+  old-schema:
+    description: 'Path to baseline/previous data file to compare for breaking schema changes'
+    required: false
+    default: ''
+  resource-name:
+    description: 'Optional override for the inferred API resource name'
+    required: false
+    default: ''
+  python-version:
+    description: 'Python runtime version to use'
+    required: false
+    default: '3.11'
+  mock-count:
+    description: 'Number of synthetic mock records to generate for database bootstrapping'
+    required: false
+    default: '10'
+
+outputs:
+  api-directory:
+    description: 'Path to the generated API codebase directory'
+    value: ${{ inputs.output-dir }}
+  has-breaking-changes:
+    description: 'Whether breaking schema changes were detected against old-schema'
+    value: ${{ steps.diff-step.outputs.has-breaking-changes }}
+
+runs:
+  using: 'composite'
+  steps:
+    # 1. Sets up Python
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    # Install datapi engine and test harness
+    - name: Install datapi and Dependencies
+      shell: bash
+      run: |
+        echo "::group::📦 Installing datapi & Test Harness"
+        python -m pip install --upgrade pip
+        pip install pytest httpx fastapi uvicorn pydantic
+
+        # If running from local datapi repository
+        if [ -f "$GITHUB_ACTION_PATH/../../../pyproject.toml" ]; then
+          pip install -e "$GITHUB_ACTION_PATH/../../.."
+        elif [ -f "./pyproject.toml" ]; then
+          pip install -e .
+        elif ! command -v datapi &> /dev/null; then
+          pip install datapi || pip install -e . || true
+        fi
+        echo "::endgroup::"
+
+    # 2. Runs datapi inspect
+    - name: Inspect Schema & Data Contract
+      shell: bash
+      run: |
+        echo "::group::🔍 Step 1: datapi inspect"
+        CLI_CMD="datapi"
+        if ! command -v datapi &> /dev/null; then
+          CLI_CMD="python -m datapi.cli"
+        fi
+
+        $CLI_CMD inspect --data "${{ inputs.data-file }}"
+        echo "::endgroup::"
+
+    # 3. If an old schema is provided, runs datapi diff to detect breaking changes and generate PR comments
+    - name: Detect Schema Drift & Diff Breaking Changes
+      id: diff-step
+      if: ${{ inputs.old-schema != '' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        echo "::group::⚖️ Step 2: datapi diff"
+        CLI_CMD="datapi"
+        if ! command -v datapi &> /dev/null; then
+          CLI_CMD="python -m datapi.cli"
+        fi
+
+        PR_REPORT="datapi-schema-drift.md"
+        NAME_FLAG=""
+        if [ -n "${{ inputs.resource-name }}" ]; then
+          NAME_FLAG="--name ${{ inputs.resource-name }}"
+        fi
+
+        echo "Diffing baseline '${{ inputs.old-schema }}' vs '${{ inputs.data-file }}'..."
+        $CLI_CMD diff --old "${{ inputs.old-schema }}" --new "${{ inputs.data-file }}" --pr "$PR_REPORT" $NAME_FLAG
+
+        # Append automated drift analysis to GitHub Actions Step Summary
+        if [ -f "$PR_REPORT" ]; then
+          cat "$PR_REPORT" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        # Evaluate breaking change status
+        BREAKING_FOUND=$(python -c "
+        import sys
+        from pathlib import Path
+        from datapi.diff import diff_files
+        old_path = Path('${{ inputs.old-schema }}')
+        new_path = Path('${{ inputs.data-file }}')
+        rname = '${{ inputs.resource-name }}' or None
+        diff = diff_files(old_path, new_path, resource_name=rname)
+        print('true' if diff.has_breaking_changes else 'false')
+        ")
+
+        echo "has-breaking-changes=$BREAKING_FOUND" >> "$GITHUB_OUTPUT"
+
+        # Post automated review comment to PR if running in pull request context
+        if [ -f "$PR_REPORT" ] && [ "${{ github.event_name }}" = "pull_request" ] && command -v gh &> /dev/null && [ -n "$GITHUB_TOKEN" ]; then
+          echo "Posting schema drift analysis to Pull Request #${{ github.event.pull_request.number }}..."
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file "$PR_REPORT" || echo "Note: PR comment skipped (check GitHub Token permissions)"
+        fi
+
+        # Enforce fail-on-breaking policy
+        if [ "$BREAKING_FOUND" = "true" ] && [ "${{ inputs.fail-on-breaking }}" = "true" ]; then
+          echo "::error file=${{ inputs.data-file }}::🚨 Breaking schema drift detected between '${{ inputs.old-schema }}' and '${{ inputs.data-file }}'! Build failed per fail-on-breaking policy."
+          exit 1
+        fi
+        echo "::endgroup::"
+
+    # 4. Runs datapi generate
+    - name: Generate Production FastAPI Microservice
+      shell: bash
+      run: |
+        echo "::group::🚀 Step 3: datapi generate"
+        CLI_CMD="datapi"
+        if ! command -v datapi &> /dev/null; then
+          CLI_CMD="python -m datapi.cli"
+        fi
+
+        AUTH_FLAG=""
+        if [ "${{ inputs.auth }}" = "true" ]; then
+          AUTH_FLAG="--auth"
+        fi
+
+        NAME_FLAG=""
+        if [ -n "${{ inputs.resource-name }}" ]; then
+          NAME_FLAG="--name ${{ inputs.resource-name }}"
+        fi
+
+        MOCK_FLAG=""
+        if [ -n "${{ inputs.mock-count }}" ]; then
+          MOCK_FLAG="--mock ${{ inputs.mock-count }}"
+        fi
+
+        $CLI_CMD generate --data "${{ inputs.data-file }}" --out "${{ inputs.output-dir }}" $AUTH_FLAG $NAME_FLAG $MOCK_FLAG
+
+        echo "✅ Generated microservice verified at ${{ inputs.output-dir }}:"
+        ls -la "${{ inputs.output-dir }}"
+        echo "::endgroup::"
+
+    # 5. Runs Pytest contract tests
+    - name: Run Pytest Contract Test Suite
+      shell: bash
+      run: |
+        echo "::group::🧪 Step 4: Pytest Contract Tests"
+        OUT_DIR="${{ inputs.output-dir }}"
+
+        # Install generated service dependencies
+        if [ -f "$OUT_DIR/requirements-dev.txt" ]; then
+          pip install -r "$OUT_DIR/requirements-dev.txt"
+        elif [ -f "$OUT_DIR/requirements.txt" ]; then
+          pip install -r "$OUT_DIR/requirements.txt"
+        fi
+
+        # Execute contract tests validating OpenAPI compliance, status codes, and schema
+        if [ -d "$OUT_DIR/tests" ]; then
+          echo "Executing contract test suite in $OUT_DIR/tests..."
+          (cd "$OUT_DIR" && pytest tests/ -v --tb=short)
+        else
+          echo "No tests directory found in $OUT_DIR, skipping contract suite."
+        fi
+        echo "::endgroup::"

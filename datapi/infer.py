@@ -13,6 +13,13 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 @dataclass
+class ForeignKeyDef:
+    field_name: str
+    target_resource: str
+    target_field: str
+
+
+@dataclass
 class FieldDef:
     name: str
     python_type: str  # 'int', 'float', 'bool', 'str', 'datetime', 'date'
@@ -33,6 +40,7 @@ class SchemaDef:
     fields: List[FieldDef] = field(default_factory=list)
     primary_key: Optional[str] = None
     sample_records: List[Dict[str, Any]] = field(default_factory=list)
+    foreign_keys: List[ForeignKeyDef] = field(default_factory=list)
 
 
 def _sanitize_field_name(name: str) -> str:
@@ -234,3 +242,115 @@ def infer_from_file(file_path: Union[str, Path], resource_name: Optional[str] = 
 
     else:
         raise ValueError(f"Unsupported file extension: {path.suffix}")
+
+
+def infer_multi_table_relationships(schemas: List[SchemaDef]) -> List[SchemaDef]:
+    """
+    Infers foreign key relationships across multiple schemas.
+    If schema A has a field matching <target_singular>_id or <target_singular>Id
+    and schema B has resource name <target_singular> with PK id or <target_singular>_id,
+    establishes a foreign key relationship.
+    """
+    for schema_a in schemas:
+        for f in schema_a.fields:
+            target_singular = None
+            f_lower = f.name.lower()
+            if f_lower.endswith("_id") and len(f_lower) > 3:
+                target_singular = f_lower[:-3]
+            elif f.name.endswith("Id") and len(f.name) > 2:
+                target_singular = f.name[:-2].lower()
+            elif f_lower.endswith("id") and len(f_lower) > 2 and f_lower != "uuid":
+                target_singular = f_lower[:-2]
+
+            if not target_singular:
+                continue
+
+            for schema_b in schemas:
+                if schema_b is schema_a:
+                    continue
+
+                b_res = schema_b.resource_name.lower()
+                b_plural = schema_b.plural_name.lower()
+                matches_res = (
+                    b_res == target_singular
+                    or b_res.rstrip("s") == target_singular.rstrip("s")
+                    or b_plural == f"{target_singular}s"
+                    or b_plural == target_singular
+                )
+                if not matches_res:
+                    continue
+
+                target_field = None
+                valid_pk_names = {
+                    "id",
+                    f"{target_singular}_id",
+                    f"{schema_b.resource_name.lower()}_id",
+                    f"{target_singular}id",
+                    f"{schema_b.resource_name.lower()}id",
+                }
+
+                if schema_b.primary_key and schema_b.primary_key.lower() in valid_pk_names:
+                    target_field = schema_b.primary_key
+                else:
+                    for f_b in schema_b.fields:
+                        if f_b.name.lower() in valid_pk_names:
+                            target_field = f_b.name
+                            if f_b.is_primary_key:
+                                break
+
+                if target_field:
+                    if not any(
+                        fk.field_name == f.name and fk.target_resource == schema_b.resource_name
+                        for fk in schema_a.foreign_keys
+                    ):
+                        schema_a.foreign_keys.append(
+                            ForeignKeyDef(
+                                field_name=f.name,
+                                target_resource=schema_b.resource_name,
+                                target_field=target_field,
+                            )
+                        )
+                    break
+
+    return schemas
+
+
+def infer_from_directory(dir_path: Union[str, Path]) -> List[SchemaDef]:
+    """
+    Scans a directory for .csv, .json, and .sqlite tables, infers their schemas,
+    and links multi-table foreign key relationships.
+    """
+    path = Path(dir_path)
+    if not path.exists() or not path.is_dir():
+        raise FileNotFoundError(f"Directory not found: {path}")
+
+    schemas: List[SchemaDef] = []
+    files = sorted(path.iterdir(), key=lambda p: p.name.lower())
+
+    for f in files:
+        if not f.is_file() or f.name.startswith("."):
+            continue
+        ext = f.suffix.lower()
+        if ext in (".csv", ".json"):
+            try:
+                schemas.append(infer_from_file(f))
+            except Exception:
+                pass
+        elif ext in (".sqlite", ".sqlite3", ".db"):
+            try:
+                conn = sqlite3.connect(f)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+                tables = [r[0] for r in cur.fetchall()]
+                for table in tables:
+                    cur.execute(f'SELECT * FROM "{table}" LIMIT 100')
+                    rows = [dict(r) for r in cur.fetchall()]
+                    if rows:
+                        schemas.append(infer_schema_from_records(rows, resource_name=table.rstrip("s").lower()))
+                conn.close()
+            except Exception:
+                pass
+
+    return infer_multi_table_relationships(schemas)
+

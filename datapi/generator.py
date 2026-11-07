@@ -3,43 +3,70 @@ Datapi Code & Specification Generator.
 Generates OpenAPI 3.1, FastAPI app with Pydantic models, Dockerfile, Terraform for Cloud Run, and Docs.
 """
 
+import base64
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+import http
 import json
 import pprint
 import random
+import time
 import uuid
-from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
 from datapi.planner import APIPlan
 from datapi.infer import FieldDef, SchemaDef
 from datapi.sdk_generator import generate_typescript_sdk
+from datapi.python_sdk_generator import generate_python_sdk
+
+
+def _is_decimal_field(field: FieldDef) -> bool:
+    if getattr(field, "openapi_format", None) == "decimal":
+        return True
+    py_t = str(getattr(field, "python_type", "")).lower()
+    if py_t in ("decimal", "decimal.decimal"):
+        return True
+    name_lower = getattr(field, "name", "").lower()
+    if any(kw in name_lower for kw in ("price", "amount", "balance", "currency")):
+        return True
+    return False
 
 
 def _py_type_annotation(field: FieldDef) -> str:
-    mapping = {
-        "int": "int",
-        "float": "float",
-        "bool": "bool",
-        "str": "str",
-        "datetime": "datetime",
-        "date": "date",
-    }
-    base = mapping.get(field.python_type, "str")
+    if _is_decimal_field(field):
+        base = "Decimal"
+    else:
+        mapping = {
+            "int": "int",
+            "float": "float",
+            "bool": "bool",
+            "str": "str",
+            "datetime": "datetime",
+            "date": "date",
+            "decimal": "Decimal",
+            "Decimal": "Decimal",
+        }
+        base = mapping.get(field.python_type, "str")
     if field.nullable:
         return f"Optional[{base}] = None"
     return base
 
 
 def _py_type_annotation_optional(field: FieldDef) -> str:
-    mapping = {
-        "int": "int",
-        "float": "float",
-        "bool": "bool",
-        "str": "str",
-        "datetime": "datetime",
-        "date": "date",
-    }
-    base = mapping.get(field.python_type, "str")
+    if _is_decimal_field(field):
+        base = "Decimal"
+    else:
+        mapping = {
+            "int": "int",
+            "float": "float",
+            "bool": "bool",
+            "str": "str",
+            "datetime": "datetime",
+            "date": "date",
+            "decimal": "Decimal",
+            "Decimal": "Decimal",
+        }
+        base = mapping.get(field.python_type, "str")
     return f"Optional[{base}] = None"
 
 
@@ -58,6 +85,8 @@ def _generate_synthetic_record(schema: SchemaDef, idx: int) -> Dict[str, Any]:
             row[f.name] = (date.today() - timedelta(days=idx * 3)).isoformat()
         elif f.openapi_format == "date-time":
             row[f.name] = (datetime.now() - timedelta(hours=idx * 6)).isoformat()
+        elif _is_decimal_field(f):
+            row[f.name] = round(19.99 + (idx * 5.5), 2)
         elif f.python_type == "int":
             row[f.name] = idx * 10
         elif f.python_type == "float":
@@ -78,9 +107,12 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
     required_fields: List[str] = []
 
     for f in schema.fields:
-        prop: Dict[str, Any] = {"type": f.openapi_type, "description": f.description}
-        if f.openapi_format:
-            prop["format"] = f.openapi_format
+        if _is_decimal_field(f):
+            prop: Dict[str, Any] = {"type": "number", "format": "decimal", "description": f.description}
+        else:
+            prop: Dict[str, Any] = {"type": f.openapi_type, "description": f.description}
+            if f.openapi_format:
+                prop["format"] = f.openapi_format
         if f.enum_values:
             prop["enum"] = f.enum_values
         if f.example is not None:
@@ -116,6 +148,8 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
                     "total": {"type": "integer"},
                     "limit": {"type": "integer"},
                     "offset": {"type": "integer"},
+                    "next_cursor": {"type": "string"},
+                    "has_more": {"type": "boolean"},
                 },
             },
             f"{res_title}ListResponse": {
@@ -125,8 +159,23 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
                         "type": "array",
                         "items": {"$ref": f"#/components/schemas/{res_title}Response"},
                     },
+                    "total": {"type": "integer"},
+                    "next_cursor": {"type": "string"},
+                    "has_more": {"type": "boolean"},
                     "pagination": {"$ref": "#/components/schemas/PaginationMetadata"},
                 },
+                "required": ["items", "total", "has_more"],
+            },
+            "ProblemDetails": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string"},
+                    "title": {"type": "string"},
+                    "status": {"type": "integer"},
+                    "detail": {},
+                    "instance": {"type": "string"},
+                },
+                "required": ["type", "title", "status", "detail", "instance"],
             },
         }
     }
@@ -173,6 +222,18 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
                 "schema": {"type": "integer", "default": 0},
                 "description": "Offset for pagination",
             },
+            {
+                "name": "cursor",
+                "in": "query",
+                "schema": {"type": "string"},
+                "description": "Cursor token for keyset pagination",
+            },
+            {
+                "name": "sort",
+                "in": "query",
+                "schema": {"type": "string"},
+                "description": "Sort field (prefix with '-' for descending)",
+            },
         ],
         "responses": {
             "200": {
@@ -215,6 +276,15 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
         spec["paths"][res_path]["post"] = {
             "summary": f"Create a new {schema.resource_name}",
             "tags": [res_title],
+            "parameters": [
+                {
+                    "name": "Idempotency-Key",
+                    "in": "header",
+                    "required": False,
+                    "schema": {"type": "string"},
+                    "description": "Unique key to ensure idempotent request processing",
+                }
+            ],
             "requestBody": {
                 "required": True,
                 "content": {
@@ -345,9 +415,12 @@ def generate_fastapi_code(plan: APIPlan) -> str:
     filter_checks = []
     for ff in plan.filter_fields:
         f_def = next((f for f in schema.fields if f.name == ff), None)
-        py_t = f_def.python_type if f_def else "str"
-        py_t_map = {"int": "int", "float": "float", "bool": "bool", "str": "str", "datetime": "datetime", "date": "date"}
-        annot = py_t_map.get(py_t, "str")
+        if f_def and _is_decimal_field(f_def):
+            annot = "Decimal"
+        else:
+            py_t = f_def.python_type if f_def else "str"
+            py_t_map = {"int": "int", "float": "float", "bool": "bool", "str": "str", "datetime": "datetime", "date": "date"}
+            annot = py_t_map.get(py_t, "str")
         filter_args.append(f"{ff}: Optional[{annot}] = Query(None, description='Filter by {ff}')")
         filter_checks.append(f"    if {ff} is not None:\n        results = [x for x in results if str(x.get('{ff}')) == str({ff})]")
 
@@ -400,13 +473,20 @@ def verify_api_key(api_key: Optional[str] = Security(api_key_header)):
 Generated by Datapi Engine.
 """
 
+import base64
 from datetime import date, datetime
+from decimal import Decimal
+import http
+import json
+import time
 from typing import Any, Dict, List, Optional
 import uuid
 
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, Header, HTTPException, Query, Request, Response, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 {auth_imports}
 
@@ -418,6 +498,45 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json",
 )
+
+# --- RFC 7807 Problem Details Exception Handlers ---
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    try:
+        phrase = http.HTTPStatus(exc.status_code).phrase
+    except ValueError:
+        phrase = "HTTP Error"
+    status_slug = phrase.lower().replace(" ", "-")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={{
+            "type": f"urn:problem-type:{{status_slug}}",
+            "title": phrase,
+            "status": exc.status_code,
+            "detail": exc.detail,
+            "instance": request.url.path,
+        }},
+        media_type="application/problem+json",
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    status_code = 422
+    return JSONResponse(
+        status_code=status_code,
+        content={{
+            "type": "urn:problem-type:validation-error",
+            "title": "Unprocessable Entity",
+            "status": status_code,
+            "detail": jsonable_encoder(exc.errors()),
+            "instance": request.url.path,
+        }},
+        media_type="application/problem+json",
+    )
+
 
 # --- Scalar Modern Interactive API Reference ---
 @app.get("/scalar", response_class=HTMLResponse, include_in_schema=False)
@@ -469,11 +588,16 @@ class PaginationMetadata(BaseModel):
     total: int
     limit: int
     offset: int
+    next_cursor: Optional[str] = None
+    has_more: bool = False
 
 
 class {res_title}ListResponse(BaseModel):
     items: List[{res_title}Response]
-    pagination: PaginationMetadata
+    total: int
+    next_cursor: Optional[str] = None
+    has_more: bool = False
+    pagination: Optional[PaginationMetadata] = None
 
 
 # --- In-Memory Database / Data Store ---
@@ -484,6 +608,10 @@ for row in INITIAL_RECORDS:
     item_id = str(row.get("{pk}") or uuid.uuid4())
     row["{pk}"] = item_id
     db[item_id] = row
+
+# --- Idempotency Cache ---
+IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {{}}
+IDEMPOTENCY_TTL_SECONDS = 300
 
 
 # --- Health Probe for Cloud Run ---
@@ -504,6 +632,8 @@ def health_check():
 def list_{schema.plural_name}(
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     offset: int = Query(0, ge=0, description="Page offset"),
+    cursor: Optional[str] = Query(None, description="Cursor for keyset pagination"),
+    sort: Optional[str] = Query(None, description="Sort field (prefix with '-' for descending)"),
     q: Optional[str] = Query(None, description="Search query across text fields"){filter_args_str}
 ):
     results = list(db.values())
@@ -517,9 +647,70 @@ def list_{schema.plural_name}(
 
 {filter_checks_str}
 
+    # Sorting
+    if sort:
+        reverse = sort.startswith("-")
+        sort_key = sort[1:] if reverse else sort
+        def _sort_val(x):
+            v = x.get(sort_key)
+            if v is None:
+                return (1, "")
+            try:
+                return (0, v)
+            except Exception:
+                return (0, str(v))
+        try:
+            results = sorted(results, key=_sort_val, reverse=reverse)
+        except TypeError:
+            results = sorted(results, key=lambda x: str(x.get(sort_key, "")), reverse=reverse)
+
     total = len(results)
-    paged_items = results[offset : offset + limit]
-    return {{"items": paged_items, "pagination": {{"total": total, "limit": limit, "offset": offset}}}}
+
+    # Keyset / Cursor pagination
+    last_id = None
+    if cursor:
+        try:
+            cursor_data = json.loads(base64.b64decode(cursor.encode("utf-8")).decode("utf-8"))
+            last_id = cursor_data.get("id")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid cursor token")
+
+    def _is_greater(item_val, cursor_val):
+        try:
+            return int(item_val) > int(cursor_val)
+        except (ValueError, TypeError):
+            return str(item_val) > str(cursor_val)
+
+    if last_id is not None:
+        results = [x for x in results if _is_greater(x.get("{pk}", x.get("id")), last_id)]
+
+    if cursor is not None:
+        paged_items = results[:limit]
+        has_more = len(results) > limit
+    else:
+        paged_items = results[offset : offset + limit]
+        has_more = (offset + limit) < total
+
+    next_cursor = None
+    if has_more and paged_items:
+        last_item_id = paged_items[-1].get("{pk}")
+        if last_item_id is None:
+            last_item_id = paged_items[-1].get("id")
+        next_cursor = base64.b64encode(json.dumps({{"id": last_item_id}}).encode("utf-8")).decode("utf-8")
+
+    return {{
+        "items": paged_items,
+        "total": total,
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+        "pagination": {{
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "next_cursor": next_cursor,
+            "has_more": has_more,
+        }},
+    }}
 
 
 @app.get(
@@ -550,11 +741,35 @@ def get_{schema.resource_name}({pk}: str):
     summary="Create a new {schema.resource_name}",
     tags=["{res_title}"]{endpoint_security},
 )
-def create_{schema.resource_name}(payload: {res_title}Create):
+def create_{schema.resource_name}(
+    payload: {res_title}Create,
+    response: Response,
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
+):
+    now = time.time()
+    if idempotency_key:
+        cached = IDEMPOTENCY_CACHE.get(idempotency_key)
+        if cached:
+            created_at = cached.get("timestamp", 0)
+            if now - created_at < IDEMPOTENCY_TTL_SECONDS:
+                return JSONResponse(
+                    content=cached["data"],
+                    status_code=status.HTTP_201_CREATED,
+                    headers={{"X-Cache-Lookup": "HIT"}},
+                )
+            else:
+                IDEMPOTENCY_CACHE.pop(idempotency_key, None)
+
 {id_gen_logic}
     record = payload.model_dump()
     record["{pk}"] = new_id
     db[str(new_id)] = record
+    if idempotency_key:
+        response.headers["X-Cache-Lookup"] = "MISS"
+        IDEMPOTENCY_CACHE[idempotency_key] = {{
+            "timestamp": now,
+            "data": jsonable_encoder(record),
+        }}
     return record
 '''
 
@@ -646,6 +861,7 @@ def test_list_{schema.plural_name}():
     assert response.status_code == 200
     data = response.json()
     assert "items" in data
+    assert "total" in data
     assert "pagination" in data
     assert len(data["items"]) <= 5
 
@@ -664,6 +880,12 @@ def test_get_{schema.resource_name}_by_id():
 def test_not_found():
     response = client.get("/{schema.plural_name}/nonexistent-id-9999", headers=AUTH_HEADERS)
     assert response.status_code == 404
+    assert response.headers.get("content-type") == "application/problem+json"
+    problem = response.json()
+    assert problem["status"] == 404
+    assert "type" in problem
+    assert "title" in problem
+    assert "instance" in problem
 {auth_tests}'''
 
 
@@ -987,7 +1209,7 @@ def generate_project(plan: APIPlan, output_dir: Path) -> Dict[str, str]:
         f.write(readme)
     generated_files["README.md"] = str(readme_path)
 
-    # 8. TypeScript Client SDK (sdk/client.ts)
+    # 8. TypeScript & Python Client SDKs (sdk/client.ts, sdk/client.py)
     sdk_dir = output_dir / "sdk"
     sdk_dir.mkdir(exist_ok=True)
     ts_sdk = generate_typescript_sdk(plan)
@@ -995,5 +1217,11 @@ def generate_project(plan: APIPlan, output_dir: Path) -> Dict[str, str]:
     with open(ts_sdk_path, "w", encoding="utf-8") as f:
         f.write(ts_sdk)
     generated_files["sdk/client.ts"] = str(ts_sdk_path)
+
+    py_sdk = generate_python_sdk(plan)
+    py_sdk_path = sdk_dir / "client.py"
+    with open(py_sdk_path, "w", encoding="utf-8") as f:
+        f.write(py_sdk)
+    generated_files["sdk/client.py"] = str(py_sdk_path)
 
     return generated_files
