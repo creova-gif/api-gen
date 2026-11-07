@@ -4,7 +4,7 @@ Generates code migration patches, GitHub PR bodies, and consumer client upgrade 
 when a schema change or API drift occurs.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from apigen.diff import SchemaDiff
 
 
@@ -80,6 +80,6 @@ def generate_pr_markdown(diff: SchemaDiff, base_version: str = "1.0.0", next_ver
 - [ ] Client SDK deserialization checks verified.
 
 ---
-*Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ')} by APIGen Autonomous Agent.*
+*Created on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%SZ')} by APIGen Autonomous Agent.*
 """
     return pr
