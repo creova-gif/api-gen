@@ -1,4 +1,4 @@
-# APIGen Studio: Martian-Grade Developer Experience (DX) Architecture
+# datapi Studio: Martian-Grade Developer Experience (DX) Architecture
 *Inspired by Roman Shamin & the Evil Martians Product Design Team ("Devs in mind: how to design interfaces for developer tools")*
 
 ---
@@ -13,7 +13,7 @@ Developer tools are fundamentally different from consumer apps:
 
 ---
 
-## 2. The Three Contexts Model Applied to APIGen Studio
+## 2. The Three Contexts Model Applied to datapi Studio
 
 ```
 +-------------------------------------------------------------------------------------------------------+
@@ -51,7 +51,7 @@ Developer tools are fundamentally different from consumer apps:
   * `⌘ + Enter` / `Ctrl + Enter`: Execute simulated request.
   * `⌘ + S` / `Ctrl + S`: Export unzipped production bundle.
   * `⌘ + K` / `Ctrl + K`: Quick-focus search / path input.
-* **Zero Build & Portable Distribution:** Single-file studio that works offline and natively binds to `python3 apigen.py studio`.
+* **Zero Build & Portable Distribution:** Single-file studio that works offline and natively binds to `python3 datapi.py studio`.
 
 ---
 

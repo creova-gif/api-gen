@@ -17,7 +17,7 @@ jobs:
     - name: Ruff (errors and pyflakes)
       run: |
         pip install ruff
-        ruff check --select E9,F apigen apigen.py tests
+        ruff check --select E9,F datapi datapi.py tests
 
   test:
     runs-on: ubuntu-latest
@@ -39,19 +39,19 @@ jobs:
 
     - name: Verify CLI Generation & Self-Maintaining Diff
       run: |
-        python apigen.py inspect -d examples/customers.csv
-        python apigen.py generate -d examples/customers.csv -o ./test_api --auth --mock 10
+        python datapi.py inspect -d examples/customers.csv
+        python datapi.py generate -d examples/customers.csv -o ./test_api --auth --mock 10
         test -f test_api/openapi.json
         test -f test_api/app/main.py
         test -f test_api/tests/test_api.py
         test -f test_api/terraform/main.tf
         test -f test_api/sdk/client.ts
-        python apigen.py diff -a examples/customers.csv -b examples/customers_v2.csv --pr pr_test.md
+        python datapi.py diff -a examples/customers.csv -b examples/customers_v2.csv --pr pr_test.md
         test -f pr_test.md
 
     - name: Run Generated Service Test Suites
       run: |
-        python apigen.py generate -d examples/inventory.json -o ./test_api_json --mock 30
+        python datapi.py generate -d examples/inventory.json -o ./test_api_json --mock 30
         for dir in test_api test_api_json; do
           python -m venv "$dir/.venv"
           "$dir/.venv/bin/pip" install -q -r "$dir/requirements-dev.txt"
@@ -74,9 +74,9 @@ jobs:
     - name: Smoke test installed CLI outside the repo
       working-directory: /tmp
       run: |
-        /tmp/wheel-venv/bin/apigen generate -d "$GITHUB_WORKSPACE/examples/customers.csv" -o /tmp/wheel_api --auth --mock 10
+        /tmp/wheel-venv/bin/datapi generate -d "$GITHUB_WORKSPACE/examples/customers.csv" -o /tmp/wheel_api --auth --mock 10
         test -f /tmp/wheel_api/app/main.py
-        /tmp/wheel-venv/bin/python -c "import apigen, pathlib; assert (pathlib.Path(apigen.__file__).parent / 'studio' / 'index.html').is_file()"
+        /tmp/wheel-venv/bin/python -c "import datapi, pathlib; assert (pathlib.Path(datapi.__file__).parent / 'studio' / 'index.html').is_file()"
 
   docker:
     runs-on: ubuntu-latest
@@ -87,15 +87,15 @@ jobs:
         python-version: "3.12"
     - name: Build generated service image
       run: |
-        python apigen.py generate -d examples/customers.csv -o ./docker_api --auth --mock 10
-        docker build -t apigen-ci ./docker_api
+        python datapi.py generate -d examples/customers.csv -o ./docker_api --auth --mock 10
+        docker build -t datapi-ci ./docker_api
     - name: Run container and probe endpoints
       run: |
-        docker run -d --name apigen-ci -p 8080:8080 -e API_KEY=ci-key apigen-ci
+        docker run -d --name datapi-ci -p 8080:8080 -e API_KEY=ci-key datapi-ci
         for i in $(seq 1 30); do curl -sf http://localhost:8080/healthz && break; sleep 1; done
         test "$(curl -s -o /dev/null -w '%{http_code}' -H 'X-API-Key: ci-key' http://localhost:8080/customers)" = 200
         test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/customers)" = 401
-        test "$(docker exec apigen-ci id -u)" != 0
+        test "$(docker exec datapi-ci id -u)" != 0
     - name: Container logs
       if: always()
-      run: docker logs apigen-ci || true
+      run: docker logs datapi-ci || true

@@ -1,4 +1,4 @@
-# APIGen Master Architecture & 10x Moat Blueprint
+# datapi Master Architecture & 10x Moat Blueprint
 
 > **Vision:** Anyone, anywhere drops any dataset, schema, or legacy database dump and instantly gets a production-grade, self-maintaining API microservice with zero dev-ops friction, interactive browser execution, and automated client maintenance.
 
@@ -6,7 +6,7 @@
 
 ## 1. Competitive Benchmark Analysis: Why Existing Solutions Fall Short
 
-| Dimension | **Hasura / PostgREST** | **Supabase / PocketBase** | **Stainless / Speakeasy** | **APIGen (Our Solution)** |
+| Dimension | **Hasura / PostgREST** | **Supabase / PocketBase** | **Stainless / Speakeasy** | **datapi (Our Solution)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Architectural Model** | Opaque runtime database proxy (Rust / Haskell). | Full BaaS stack (Postgres + Auth + Storage). | SDK generator from existing OpenAPI specs. | **Code-First Generator + Self-Maintaining Fabric.** |
 | **Legacy Ingestion** | ❌ Fails on raw CSV, JSON, Parquet, or SQLite. Must connect to live Postgres. | ❌ Requires database migration and vendor lock-in. | ❌ Cannot generate APIs or backends; only creates client SDKs. | ✅ **Ingests anything:** CSV, JSON, SQLite, Parquet, DuckDB, or SQL dumps. |
@@ -18,11 +18,11 @@
 
 ## 2. The 10X Web UI/UX Blueprint ("Vercel for APIs")
 
-To make APIGen **10x better than any developer company**, the web UI must not be a boring form. It must feel like magic, interactive in under 2 seconds:
+To make datapi **10x better than any developer company**, the web UI must not be a boring form. It must feel like magic, interactive in under 2 seconds:
 
 ```
 +---------------------------------------------------------------------------------------------------+
-|  ⚡ APIGen Studio                                                 [ GitHub ]  [ Docs ]  [ Deploy ] |
+|  ⚡ datapi Studio                                                 [ GitHub ]  [ Docs ]  [ Deploy ] |
 +---------------------------------------------------------------------------------------------------+
 |                                                                                                   |
 |   DROP ANY DATASET HERE                                                                           |
@@ -60,16 +60,16 @@ To make APIGen **10x better than any developer company**, the web UI must not be
 
 ### A. The Analytical OLAP Wedge: Embedded DuckDB
 * **The Problem:** SQLite and PostgreSQL are row-oriented (OLTP). When a customer uploads a 500,000-row CSV or Parquet file and wants aggregations (`/customers/stats`, `/sales/summary`), row stores choke or require spinning up expensive Snowflake/BigQuery instances.
-* **The 10x Feature:** Integrate an optional **embedded DuckDB engine** (`--db duckdb`). APIGen automatically emits high-speed analytical endpoints (`GET /analytics/summary`, `GET /analytics/metrics`) executing vectorized columnar SQL queries in sub-15ms latency over millions of records.
+* **The 10x Feature:** Integrate an optional **embedded DuckDB engine** (`--db duckdb`). datapi automatically emits high-speed analytical endpoints (`GET /analytics/summary`, `GET /analytics/metrics`) executing vectorized columnar SQL queries in sub-15ms latency over millions of records.
 
 ### B. Multi-Language Client SDK Generation
-* In addition to the backend server, APIGen generates turnkey, type-safe client SDKs:
+* In addition to the backend server, datapi generates turnkey, type-safe client SDKs:
   * `sdk/typescript`: Fully typed TypeScript client with zero dependencies (`fetch`-based).
   * `sdk/python`: Typed Python async client using `httpx`.
 
 ### C. The Self-Maintaining PR Bot for Downstream Repositories
 * Connect to GitHub via a GitHub App:
-  * Whenever a partner updates their dataset, APIGen not only diffs the schema but uses an AST parser to open a Pull Request in the consumer's repository, modifying frontend query hooks (`useQuery`) and backend caller parameters automatically.
+  * Whenever a partner updates their dataset, datapi not only diffs the schema but uses an AST parser to open a Pull Request in the consumer's repository, modifying frontend query hooks (`useQuery`) and backend caller parameters automatically.
 
 ---
 
@@ -79,7 +79,7 @@ To make APIGen **10x better than any developer company**, the web UI must not be
    - Core Schema Inference (CSV, JSON, SQLite).
    - FastAPI + Pydantic v2 + Dockerfile + Terraform Generator.
    - Turnkey Auth (`--auth`) + Synthetic Mock Generator (`--mock`).
-   - Schema Drift & Breaking Change Detection (`apigen diff`).
+   - Schema Drift & Breaking Change Detection (`datapi diff`).
    - Autonomous PR Markdown Generator.
 
 2. **Phase 2 (Current Focus):**

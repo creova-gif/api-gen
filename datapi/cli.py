@@ -1,5 +1,5 @@
 """
-APIGen Command Line Interface (CLI).
+Datapi Command Line Interface (CLI).
 Enables rapid schema inspection, end-to-end API generation, schema diffing,
 and self-maintaining API PR generation.
 """
@@ -10,11 +10,11 @@ import socketserver
 import webbrowser
 from pathlib import Path
 
-from apigen.infer import infer_from_file
-from apigen.planner import create_api_plan
-from apigen.generator import generate_project
-from apigen.diff import diff_files
-from apigen.patcher import generate_pr_markdown
+from datapi.infer import infer_from_file
+from datapi.planner import create_api_plan
+from datapi.generator import generate_project
+from datapi.diff import diff_files
+from datapi.patcher import generate_pr_markdown
 
 
 def cmd_inspect(args: argparse.Namespace) -> None:
@@ -35,7 +35,7 @@ def cmd_generate(args: argparse.Namespace) -> None:
     data_path = Path(args.data)
     out_dir = Path(args.out) if args.out else Path(f"./generated_{data_path.stem}_api")
 
-    print(f"\n🚀 APIGen Blueprint: Generating API from '{data_path}'...")
+    print(f"\n🚀 Datapi: Generating API from '{data_path}'...")
     schema = infer_from_file(data_path, resource_name=args.name)
     print(f"   [1/3] Inferred {len(schema.fields)} fields for resource '{schema.resource_name}'.")
 
@@ -78,7 +78,7 @@ def cmd_diff(args: argparse.Namespace) -> None:
     old_path = Path(args.old)
     new_path = Path(args.new)
 
-    print(f"\n🔍 APIGen Diff: Comparing '{old_path}' vs '{new_path}'...")
+    print(f"\n🔍 Datapi Diff: Comparing '{old_path}' vs '{new_path}'...")
     diff = diff_files(old_path, new_path, resource_name=args.name)
 
     if not diff.changes:
@@ -122,7 +122,7 @@ def cmd_studio(args: argparse.Namespace) -> None:
             # Clean silent logger
             pass
 
-    print("\n⚡ Launching APIGen Studio (Interactive Web UI)...")
+    print("\n⚡ Launching Datapi Studio (Interactive Web UI)...")
     print(f"   URL: http://{host}:{port}")
     print(f"   Directory: {studio_dir}")
     print("   Press Ctrl+C to stop.\n")
@@ -135,13 +135,13 @@ def cmd_studio(args: argparse.Namespace) -> None:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("\nShutting down APIGen Studio.")
+            print("\nShutting down Datapi Studio.")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="apigen",
-        description="APIGen: Self-Maintaining Schema-to-API engine generating OpenAPI 3.1, FastAPI, and Cloud Run Terraform.",
+        prog="datapi",
+        description="Datapi: Raw data in. Production APIs out. Self-Maintaining Schema-to-API engine generating OpenAPI 3.1, FastAPI, and Cloud Run Terraform.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -170,7 +170,7 @@ def main() -> None:
     diff_parser.set_defaults(func=cmd_diff)
 
     # Studio (Interactive Web UI)
-    studio_parser = subparsers.add_parser("studio", help="Launch the interactive in-browser APIGen Studio UI")
+    studio_parser = subparsers.add_parser("studio", help="Launch the interactive in-browser Datapi Studio UI")
     studio_parser.add_argument("--port", "-p", type=int, default=3000, help="Port to bind server (default: 3000)")
     studio_parser.add_argument("--host", default="127.0.0.1", help="Interface to bind (default: 127.0.0.1; use 0.0.0.0 to expose)")
     studio_parser.add_argument("--no-open", action="store_true", help="Do not automatically open the browser")

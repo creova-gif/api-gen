@@ -1,12 +1,12 @@
-# Contributing to APIGen
+# Contributing to datapi
 
-We welcome contributions to APIGen! Whether you are adding a new schema parser, expanding infrastructure targets, or improving documentation, here is how to get started.
+We welcome contributions to datapi! Whether you are adding a new schema parser, expanding infrastructure targets, or improving documentation, here is how to get started.
 
 ---
 
 ## Development Setup
 
-APIGen is built with **zero external dependencies** for the core generator itself (using Python's standard library `csv`, `json`, `sqlite3`, `dataclasses`, and `argparse`).
+datapi is built with **zero external dependencies** for the core generator itself (using Python's standard library `csv`, `json`, `sqlite3`, `dataclasses`, and `argparse`).
 
 1. **Clone the repository:**
    ```bash
@@ -29,8 +29,8 @@ APIGen is built with **zero external dependencies** for the core generator itsel
 ## Architectural Principles
 
 1. **Zero Runtime Dependencies for the Generator**: The CLI and inference engine must run on standard Python without requiring `pip install` before generation.
-2. **Inspectable Code Generation Over Black Boxes**: APIGen emits clean, human-readable FastAPI and Terraform code that developers can version control, review, and extend. We do not build opaque runtime proxies.
-3. **100% Test Backed**: Every new endpoint or generator capability must be accompanied by corresponding unit tests in `tests/test_apigen.py`.
+2. **Inspectable Code Generation Over Black Boxes**: datapi emits clean, human-readable FastAPI and Terraform code that developers can version control, review, and extend. We do not build opaque runtime proxies.
+3. **100% Test Backed**: Every new endpoint or generator capability must be accompanied by corresponding unit tests in `tests/test_datapi.py`.
 
 ---
 

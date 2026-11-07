@@ -1,6 +1,8 @@
 <div align="center">
 
-# ⚡ APIGen
+<img src="datapi/studio/assets/datapi-logo.svg" alt="datapi logo" width="380" />
+
+### Raw data in. Production APIs out.
 
 **Turn raw schemas and legacy data into tested, containerized, production-ready APIs in seconds.**
 
@@ -14,9 +16,10 @@
 <p align="center">
   <a href="#-quickstart">Quickstart</a> •
   <a href="#-how-it-works">How It Works</a> •
-  <a href="#-why-apigen-vs-alternatives">Why APIGen?</a> •
+  <a href="#-why-datapi-vs-alternatives">Why datapi?</a> •
   <a href="#-generated-architecture">Generated Architecture</a> •
-  <a href="#-cli-reference">CLI Reference</a>
+  <a href="#-cli-reference">CLI Reference</a> •
+  <a href="#-brand--studio">Brand & Studio</a>
 </p>
 
 </div>
@@ -29,14 +32,14 @@ Forward-Deployed Engineers, Solutions Architects, and backend developers waste *
 
 Existing "database-to-API" tools (Hasura, PostgREST) fail in enterprise workflows because security and architecture teams **reject black-box proxy layers** in front of production data. Developers need clean, typed, inspectable, and git-committable code that integrates into standard CI/CD pipelines.
 
-**APIGen solves this.** In under 50 milliseconds, APIGen inspects any raw dataset and generates a complete, tested, containerized microservice repository.
+**datapi solves this.** In under 50 milliseconds, datapi inspects any raw dataset and generates a complete, tested, containerized microservice repository.
 
 ---
 
 ## 🏗️ How It Works
 
 ```
-[Raw Legacy Data]                     [APIGen Engine]                      [Production Microservice]
+[Raw Legacy Data]                     [datapi Engine]                      [Production Microservice]
   (CSV, JSON, SQLite)                  (Zero Dependencies)
           │                                   │
           ├──> 1. Type & PK Inference  ───────┤
@@ -54,7 +57,7 @@ Existing "database-to-API" tools (Hasura, PostgREST) fail in enterprise workflow
 
 ### 1. Installation
 
-APIGen requires Python 3.10+ and has **zero third-party dependencies** for the generator itself:
+datapi requires Python 3.10+ and has **zero third-party dependencies** for the core generator:
 
 ```bash
 git clone https://github.com/creova-gif/api-gen.git
@@ -71,7 +74,7 @@ pip install -e .
 Inspect any dataset without touching a database:
 
 ```bash
-python3 apigen.py inspect -d examples/customers.csv
+python3 datapi.py inspect -d examples/customers.csv
 ```
 
 **Output:**
@@ -97,7 +100,7 @@ Sample records ingested: 5
 Generate an authenticated FastAPI microservice with 25 synthetic mock records and Cloud Run Terraform:
 
 ```bash
-python3 apigen.py generate \
+python3 datapi.py generate \
   -d examples/customers.csv \
   -o ./my_customer_api \
   --auth \
@@ -117,14 +120,15 @@ uvicorn app.main:app --port 8080 --reload
 With `--auth`, the service fails closed: resource endpoints return `503` until `API_KEY` is set, and `401` for a missing or wrong `X-API-Key`. The Terraform module takes the key as a sensitive `api_key` variable (`terraform apply -var="api_key=..."`).
 
 - **Interactive Swagger UI**: [http://localhost:8080/docs](http://localhost:8080/docs)
+- **Interactive Scalar UI**: [http://localhost:8080/scalar](http://localhost:8080/scalar)
 - **ReDoc Technical Docs**: [http://localhost:8080/redoc](http://localhost:8080/redoc)
 - **Health Liveness Probe**: [http://localhost:8080/healthz](http://localhost:8080/healthz)
 
 ---
 
-## 🔍 Why APIGen vs. Alternatives?
+## 🔍 Why datapi vs. Alternatives?
 
-| Feature | APIGen | Hasura / PostgREST | Supabase / PocketBase | Manual Coding |
+| Feature | datapi | Hasura / PostgREST | Supabase / PocketBase | Manual Coding |
 | :--- | :---: | :---: | :---: | :---: |
 | **Output Type** | **Git-Committable Code** | Black-box Proxy | Proprietary BaaS | Custom Code |
 | **Data Ingestion** | **Raw CSV, JSON, SQLite** | Requires Live Postgres | DB Migration Required | Manual Mapping |
@@ -164,21 +168,21 @@ my_customer_api/
 ## 🛠️ CLI Reference
 
 ```text
-usage: apigen [-h] {inspect,generate,diff,studio} ...
+usage: datapi [-h] {inspect,generate,diff,studio} ...
 ```
 
-### `apigen studio` *(Interactive Web UI)*
-Launches the zero-setup, dark-mode APIGen Studio in your browser:
+### `datapi studio` *(Interactive Web UI)*
+Launches the zero-setup, dark-mode datapi Studio in your browser:
 ```bash
-python3 apigen.py studio            # binds 127.0.0.1:3000
-python3 apigen.py studio --host 0.0.0.0 --port 8000 --no-open
+python3 datapi.py studio            # binds 127.0.0.1:3000
+python3 datapi.py studio --host 0.0.0.0 --port 8000 --no-open
 ```
 - Drag-and-drop CSV, JSON, or SQLite datasets.
 - Interactive in-browser live testing sandbox.
 - Live syntax-highlighted previews of FastAPI, TypeScript SDK, and Terraform.
 - 1-Click ZIP bundle export.
 
-### `apigen inspect`
+### `datapi inspect`
 Inspects data source and prints detected column types, primary keys, and filter candidates.
 
 | Flag | Shorthand | Required | Description |
@@ -186,7 +190,7 @@ Inspects data source and prints detected column types, primary keys, and filter 
 | `--data` | `-d` | Yes | Path to source file (`.csv`, `.json`, `.sqlite`, `.db`) |
 | `--name` | `-n` | No | Override inferred resource name |
 
-### `apigen generate`
+### `datapi generate`
 Generates complete OpenAPI spec, FastAPI app, Pytest suite, and Terraform scripts.
 
 | Flag | Shorthand | Default | Description |
@@ -198,7 +202,7 @@ Generates complete OpenAPI spec, FastAPI app, Pytest suite, and Terraform script
 | `--mock` | | `0` | Synthesize N schema-valid mock records |
 | `--intent` | `-i` | `None` | Natural language guidance (e.g. `"read-only"`) |
 
-### `apigen diff` *(Self-Maintaining APIs)*
+### `datapi diff` *(Self-Maintaining APIs)*
 Detects breaking vs. non-breaking schema drift between datasets and outputs automated GitHub PR bodies.
 
 | Flag | Shorthand | Default | Description |
@@ -210,7 +214,15 @@ Detects breaking vs. non-breaking schema drift between datasets and outputs auto
 
 ---
 
-## 🧪 Testing APIGen
+## 🎨 Brand & Design System
+
+The official brand guidelines, design tokens, and vector assets are detailed in:
+- [`docs/BRAND_KIT.md`](docs/BRAND_KIT.md)
+- [`docs/brand-kit.html`](docs/brand-kit.html) (Interactive Brand Presentation)
+
+---
+
+## 🧪 Testing datapi
 
 Run the test suite across schema inference, code generation, and contract validation:
 
@@ -226,11 +238,11 @@ python3 -m unittest discover -s tests -v
 - [x] OpenAPI 3.1.0 & Pydantic v2 code generator
 - [x] Modern Interactive Scalar Documentation (`/scalar`)
 - [x] Zero-Dependency Typed TypeScript Client SDK (`sdk/client.ts`)
-- [x] Interactive In-Browser Studio UI (`apigen studio`)
+- [x] Interactive In-Browser Studio UI (`datapi studio`)
 - [x] Google Cloud Run v2 Terraform templates
 - [x] API Key authentication via Google Secret Manager
 - [x] Synthetic mock data synthesis (`--mock`)
-- [x] Schema drift detection & automated PR generator (`apigen diff`)
+- [x] Schema drift detection & automated PR generator (`datapi diff`)
 - [ ] Multi-table foreign key relational inference (`--schema-dir`)
 - [ ] Automated client AST code-patcher (Self-Maintaining API bot)
 - [ ] AWS ECS / Fargate Terraform provider

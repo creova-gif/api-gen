@@ -1,5 +1,5 @@
 """
-APIGen Schema Diff & Self-Maintaining API Engine.
+Datapi Schema Diff & Self-Maintaining API Engine.
 Detects schema drift between two data sources or an existing OpenAPI specification and a new data source.
 Categorizes changes into BREAKING vs NON-BREAKING, and can auto-patch client and server code.
 """
@@ -9,7 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from apigen.infer import FieldDef, SchemaDef, infer_from_file
+from datapi.infer import FieldDef, SchemaDef, infer_from_file
 
 
 class ChangeType(str, Enum):

@@ -1,5 +1,5 @@
 """
-Unit tests for APIGen Blueprint Wedge.
+Unit tests for Datapi.
 Tests schema inference, intent planning, mock generation, code generation,
 and self-maintaining schema diffing / PR generation.
 """
@@ -10,14 +10,14 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from apigen.infer import infer_schema_from_records
-from apigen.planner import create_api_plan
-from apigen.generator import generate_project
-from apigen.diff import diff_schemas, ChangeType, Severity
-from apigen.patcher import generate_pr_markdown
+from datapi.infer import infer_schema_from_records
+from datapi.planner import create_api_plan
+from datapi.generator import generate_project
+from datapi.diff import diff_schemas, ChangeType, Severity
+from datapi.patcher import generate_pr_markdown
 
 
-class TestAPIGen(unittest.TestCase):
+class TestDatapi(unittest.TestCase):
     def test_infer_from_records(self):
         records = [
             {"id": "1", "name": "Alpha", "score": "98.5", "active": "true"},
@@ -45,7 +45,7 @@ class TestAPIGen(unittest.TestCase):
 
     def test_uuid_mocks_are_valid_uuids(self):
         import uuid
-        from apigen.generator import _generate_synthetic_record
+        from datapi.generator import _generate_synthetic_record
         records = [
             {"uuid": "0b6c7f0e-9a3e-4c1e-8f43-2f6a1d9b7c11", "owner": "a@example.com"},
             {"uuid": "5d2a8e4b-1c3f-4b7a-9e6d-8a0f2c4e6b13", "owner": "b@example.com"},

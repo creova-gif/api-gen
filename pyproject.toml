@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "api-gen"
+name = "datapi"
 version = "0.1.0"
-description = "Schema-to-API engine generating OpenAPI 3.1, FastAPI, and Cloud Run Terraform"
+description = "Raw data in. Production APIs out. Schema-to-API engine generating OpenAPI 3.1, FastAPI, and Cloud Run Terraform."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -15,11 +15,12 @@ authors = [
 dependencies = []
 
 [project.scripts]
-apigen = "apigen.cli:main"
+datapi = "datapi.cli:main"
+apigen = "datapi.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["apigen*"]
+include = ["datapi*"]
 
 [tool.setuptools.package-data]
-apigen = ["studio/*.html"]
+datapi = ["studio/*.html"]

@@ -5,7 +5,7 @@ when a schema change or API drift occurs.
 """
 
 from datetime import datetime, timezone
-from apigen.diff import SchemaDiff
+from datapi.diff import SchemaDiff
 
 
 def generate_migration_summary(diff: SchemaDiff) -> str:
@@ -39,7 +39,7 @@ def generate_pr_markdown(diff: SchemaDiff, base_version: str = "1.0.0", next_ver
     pr = f"""## 🤖 Automated API Maintenance: `{diff.new_resource}` Schema Upgrade
 
 {badge}
-> **Generated automatically by APIGen Self-Maintaining Engine.**  
+> **Generated automatically by Datapi Self-Maintaining Engine.**  
 > This Pull Request updates the data contracts, models, and endpoints for `{diff.new_resource}` from version `{base_version}` to `{next_version}`.
 
 ---
@@ -75,11 +75,11 @@ def generate_pr_markdown(diff: SchemaDiff, base_version: str = "1.0.0", next_ver
 ---
 
 ### 🛠️ Verification & Test Plan
-- [x] Schema validated with APIGen diff engine.
+- [x] Schema validated with Datapi diff engine.
 - [ ] Pytest contract test suite passing against updated schemas.
 - [ ] Client SDK deserialization checks verified.
 
 ---
-*Created on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%SZ')} by APIGen Autonomous Agent.*
+*Created on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%SZ')} by Datapi Autonomous Agent.*
 """
     return pr

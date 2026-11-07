@@ -1,11 +1,11 @@
 """
-APIGen Intent & API Design Planner.
+Datapi Intent & API Design Planner.
 Translates user natural language instructions into concrete API endpoint specifications.
 """
 
 from dataclasses import dataclass, field
 from typing import List, Optional
-from apigen.infer import SchemaDef
+from datapi.infer import SchemaDef
 
 
 @dataclass

@@ -1,5 +1,5 @@
 """
-APIGen Schema Inference Engine.
+Datapi Schema Inference Engine.
 Infers field types, nullability, primary keys, and enums from CSV, JSON, and SQLite sources.
 """
 
