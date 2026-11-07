@@ -44,6 +44,7 @@
               accent: '#2F6BFF',
               accentHover: '#2353cf',
               mint: '#3DDC97',
+              lime: '#D4FF3A',
               inkwell: '#0A0F1E',
               inkwellDeep: '#060A15',
               panel: '#0E1528',
@@ -61,23 +62,74 @@
   </script>
 
   <style>
-    /* Custom scrollbars matching modern developer tools */
+    /* Custom scrollbars */
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
     }
     ::-webkit-scrollbar-track {
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
       background: #1E2A45;
-      border-radius: 4px;
+      border-radius: 9999px;
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #2F6BFF;
     }
 
-    /* Gutter line numbers */
+    /* Modern atmospheric dot canvas */
+    .bg-dots {
+      background-image: radial-gradient(rgba(47, 107, 255, 0.18) 1.25px, transparent 1.25px);
+      background-size: 24px 24px;
+    }
+    .bg-grid-subtle {
+      background-image: radial-gradient(rgba(30, 42, 69, 0.7) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+
+    /* Frosted glass cards */
+    .glass-card {
+      background: rgba(14, 21, 40, 0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(30, 42, 69, 0.85);
+      box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.6);
+    }
+    .glass-card-hover {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card-hover:hover {
+      border-color: rgba(47, 107, 255, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 20px 48px -10px rgba(47, 107, 255, 0.25);
+    }
+
+    /* Neon pill active state */
+    .pill-active-mint {
+      background: #3DDC97 !important;
+      color: #060A15 !important;
+      font-weight: 700 !important;
+      box-shadow: 0 0 20px rgba(61, 220, 151, 0.4) !important;
+    }
+    .pill-active-blue {
+      background: #2F6BFF !important;
+      color: #FFFFFF !important;
+      font-weight: 700 !important;
+      box-shadow: 0 0 20px rgba(47, 107, 255, 0.4) !important;
+    }
+
+    /* Animated glowing SVG wires */
+    @keyframes flow-dash {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+    .flow-wire {
+      stroke-dasharray: 6 6;
+      animation: flow-dash 1.2s linear infinite;
+    }
+
+    /* Line numbers */
     .line-numbers {
       user-select: none;
       color: #5A6478;
@@ -117,26 +169,26 @@
     }
   </style>
 </head>
-<body class="h-full bg-ide-rail text-[#E9EDF5] font-sans flex flex-col overflow-hidden select-none">
+<body class="h-full bg-[#060A15] text-[#E9EDF5] font-sans flex flex-col overflow-hidden select-none bg-dots">
 
   <!-- ========================================================================= -->
-  <!-- 1. TOP WINDOW TITLEBAR (macOS / Developer Workstation Header)             -->
+  <!-- 1. TOP FLOATING ISLAND HEADER & MODE SELECTOR                             -->
   <!-- ========================================================================= -->
-  <header class="h-10 bg-ide-titlebar border-b border-ide-border flex items-center justify-between px-3 z-30 shrink-0">
+  <header class="h-12 bg-[#0E1528]/90 backdrop-blur-xl border-b border-[#1E2A45] flex items-center justify-between px-4 z-40 shrink-0 shadow-lg">
     
-    <!-- Left: Traffic Lights & Brand Logo & Breadcrumb -->
+    <!-- Left: Window Controls, Logo & Breadcrumb -->
     <div class="flex items-center gap-3">
       <!-- macOS Window Controls -->
       <div class="flex items-center gap-1.5 pl-1">
-        <span class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] inline-block"></span>
-        <span class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] inline-block"></span>
-        <span class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] inline-block shadow-sm"></span>
+        <span class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] inline-block shadow-sm"></span>
+        <span class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] inline-block shadow-sm"></span>
       </div>
 
-      <div class="h-4 w-px bg-ide-border mx-1"></div>
+      <div class="h-4 w-px bg-[#1E2A45] mx-1"></div>
 
       <!-- datapi Brand Mark & Lockup -->
-      <div class="flex items-center gap-2 pr-2">
+      <div class="flex items-center gap-2 pr-2 cursor-pointer" onclick="switchView('workbench')">
         <svg class="w-5 h-5 shrink-0" viewBox="0 0 512 512" fill="none">
           <rect x="136" y="112" width="52" height="288" rx="26" fill="#2F6BFF"/>
           <path d="M170,138 C330,138 396,190 396,256 C396,322 330,374 170,374" fill="none" stroke="#2F6BFF" stroke-width="52" stroke-linecap="round"/>
@@ -144,14 +196,14 @@
           <circle cx="340" cy="316" r="27" fill="#3DDC97" stroke="#0A0F1E" stroke-width="10"/>
         </svg>
         <span class="font-display font-bold text-sm tracking-tight text-white">datapi</span>
-        <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-ide-panel2 border border-ide-border text-ide-slateLight">studio</span>
+        <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded-full bg-[#111A30] border border-[#1E2A45] text-[#93A0B8]">studio</span>
       </div>
 
-      <div class="h-4 w-px bg-ide-border mx-1"></div>
+      <div class="h-4 w-px bg-[#1E2A45] mx-1 hidden lg:block"></div>
 
       <!-- Workspace Path Breadcrumb -->
-      <div class="flex items-center gap-1.5 text-xs text-ide-slateLight">
-        <span class="text-ide-slate font-medium">datapi-workspace</span>
+      <div class="hidden lg:flex items-center gap-1.5 text-xs text-[#93A0B8]">
+        <span class="text-[#5A6478] font-medium">datapi-workspace</span>
         <span class="text-zinc-600">/</span>
         <span id="breadcrumb-res" class="font-medium text-zinc-200">customers-service</span>
         <span class="text-zinc-600">/</span>
@@ -159,548 +211,941 @@
       </div>
     </div>
 
-    <!-- Center: Global Quick Command Palette Trigger (⌘K) -->
-    <div class="flex items-center justify-center flex-1 max-w-md mx-4">
-      <button id="btn-cmd-palette" class="w-full flex items-center justify-between px-3 py-1 rounded bg-[#060A15] border border-ide-border text-xs text-ide-slateLight hover:border-[#2F6BFF] hover:text-white transition">
-        <div class="flex items-center gap-2">
-          <svg class="w-3.5 h-3.5 text-ide-slate" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <span class="truncate">Search files, inspect schema, or run autonomous action...</span>
-        </div>
-        <kbd class="px-1.5 py-0.2 rounded bg-ide-panel border border-ide-border text-[10px] text-ide-slateLight font-mono">⌘K</kbd>
-      </button>
+    <!-- Center: Floating Pill Mode Switcher (Inspired by Design Samples) -->
+    <div class="flex items-center justify-center">
+      <div class="flex items-center p-1 rounded-full bg-[#0A0F1E] border border-[#1E2A45] shadow-inner gap-1">
+        <button id="nav-mode-workbench" onclick="switchView('workbench')" class="px-3 py-1 rounded-full text-xs font-semibold transition flex items-center gap-1.5 pill-active-mint">
+          <span>⚡ Workbench</span>
+        </button>
+        <button id="nav-mode-workflow" onclick="switchView('workflow')" class="px-3 py-1 rounded-full text-xs font-medium text-[#93A0B8] hover:text-white transition flex items-center gap-1.5">
+          <span>🕸️ Pipeline Graph</span>
+        </button>
+        <button id="nav-mode-observability" onclick="switchView('observability')" class="px-3 py-1 rounded-full text-xs font-medium text-[#93A0B8] hover:text-white transition flex items-center gap-1.5">
+          <span>📊 Observability</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Right: Agent Status, Run Service, Export Actions -->
+    <!-- Right: Command Search (⌘K), Engine Status, Export Actions -->
     <div class="flex items-center gap-2">
-      <!-- Autonomous Agent Pill -->
-      <div class="flex items-center gap-2 px-2.5 py-1 rounded bg-[#060A15] border border-ide-border text-xs">
-        <span class="w-2 h-2 rounded-full bg-[#3DDC97] pulse-agent"></span>
-        <span class="text-[11px] font-medium text-ide-slateLight">Engine:</span>
-        <span id="top-agent-status" class="text-[11px] text-[#3DDC97] font-mono">Ready (Synthesized)</span>
+      <!-- Global Command Palette Trigger -->
+      <button id="btn-cmd-palette" class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#060A15] border border-[#1E2A45] text-xs text-[#93A0B8] hover:border-[#2F6BFF] hover:text-white transition">
+        <svg class="w-3.5 h-3.5 text-[#5A6478]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <span class="text-[11px] hidden sm:inline">Search...</span>
+        <kbd class="px-1.5 py-0.2 rounded-full bg-[#0E1528] border border-[#1E2A45] text-[9px] text-[#93A0B8] font-mono">⌘K</kbd>
+      </button>
+
+      <!-- Autonomous Engine Pill -->
+      <div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#060A15] border border-[#1E2A45] text-xs">
+        <span class="w-2 h-2 rounded-full bg-[#3DDC97] pulse-agent shadow-[0_0_8px_#3DDC97]"></span>
+        <span class="text-[11px] font-medium text-[#93A0B8]">Engine:</span>
+        <span id="top-agent-status" class="text-[11px] text-[#3DDC97] font-mono font-semibold">Active</span>
       </div>
 
       <!-- Quick Run Button -->
-      <button id="btn-top-run" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#3DDC97]/15 text-[#3DDC97] hover:bg-[#3DDC97]/25 border border-[#3DDC97]/30 text-xs font-semibold transition" title="Run Service locally">
+      <button id="btn-top-run" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3DDC97]/15 text-[#3DDC97] hover:bg-[#3DDC97]/25 border border-[#3DDC97]/30 text-xs font-semibold transition" title="Run Service locally">
         <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24">
           <path d="M8 5v14l11-7z"/>
         </svg>
-        <span>Run :8000</span>
+        <span class="hidden sm:inline">:8000</span>
       </button>
 
       <!-- Export .zip Button -->
-      <button id="btn-top-export" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#2F6BFF] hover:bg-[#2353cf] text-white text-xs font-semibold transition shadow-sm" title="Download Complete Production ZIP">
+      <button id="btn-top-export" class="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#2F6BFF] hover:bg-[#2353cf] text-white text-xs font-semibold transition shadow-[0_0_15px_rgba(47,107,255,0.4)]" title="Download Complete Production ZIP">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
         </svg>
         <span>Export ZIP</span>
       </button>
-
-      <a href="https://github.com/creova-gif/api-gen" target="_blank" rel="noopener" class="p-1.5 rounded hover:bg-ide-panel2 text-ide-slateLight hover:text-white transition" title="View Source on GitHub">
-        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-      </a>
     </div>
   </header>
 
   <!-- ========================================================================= -->
-  <!-- 2. MAIN WORKBENCH: Activity Bar + Sidebar + Editor + Agent/Terminal       -->
+  <!-- 2. MAIN APPLICATION CONTENT CONTAINER                                     -->
   <!-- ========================================================================= -->
-  <div class="flex-1 flex overflow-hidden">
+  <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- --------------------------------------------------------------------- -->
-    <!-- 2A. LEFT ACTIVITY BAR (48px VS Code Rail)                             -->
-    <!-- --------------------------------------------------------------------- -->
-    <aside class="w-12 bg-ide-rail border-r border-ide-border flex flex-col items-center justify-between py-2 shrink-0 z-20">
-      <!-- Primary Tool Icons -->
-      <div class="flex flex-col items-center gap-1 w-full">
-        <!-- Explorer Button -->
-        <button id="act-btn-explorer" data-panel="panel-explorer" class="activity-btn w-full h-11 flex items-center justify-center text-white relative transition group border-l-2 border-[#2F6BFF]" title="Explorer (Files & Schema)">
-          <svg class="w-5 h-5 text-[#2F6BFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-          </svg>
-          <span class="sr-only">Explorer</span>
-        </button>
-
-        <!-- datapi Autonomous Engine Tasks Button -->
-        <button id="act-btn-agent" data-panel="panel-agent" class="activity-btn w-full h-11 flex items-center justify-center text-ide-slate hover:text-white relative transition group border-l-2 border-transparent" title="Autonomous Engine Tasks">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-          <span class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#3DDC97]"></span>
-          <span class="sr-only">Autonomous Engine</span>
-        </button>
-
-        <!-- API Client / Simulator Button -->
-        <button id="act-btn-simulator" data-panel="panel-simulator" class="activity-btn w-full h-11 flex items-center justify-center text-ide-slate hover:text-white relative transition group border-l-2 border-transparent" title="Live API Client Simulator">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
-          <span class="sr-only">Live Simulator</span>
-        </button>
-
-        <!-- Raw Data Input Button -->
-        <button id="act-btn-data" data-panel="panel-data" class="activity-btn w-full h-11 flex items-center justify-center text-ide-slate hover:text-white relative transition group border-l-2 border-transparent" title="Dataset Ingestion & Presets">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
-          </svg>
-          <span class="sr-only">Data Ingestion</span>
-        </button>
-      </div>
-
-      <!-- Bottom Settings & Brand Mark Tile -->
-      <div class="flex flex-col items-center gap-2 w-full">
-        <button id="btn-toggle-terminal" class="w-full h-10 flex items-center justify-center text-ide-slate hover:text-ide-slateLight transition" title="Toggle Integrated Terminal (Ctrl+`)">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-          </svg>
-        </button>
-        <div class="w-8 h-8 rounded-lg bg-[#0E1528] border border-[#1E2A45] flex items-center justify-center shadow" title="datapi v0.1.0">
-          <svg class="w-5 h-5" viewBox="0 0 512 512" fill="none">
-            <rect x="136" y="112" width="52" height="288" rx="26" fill="#2F6BFF"/>
-            <path d="M170,138 C330,138 396,190 396,256 C396,322 330,374 170,374" fill="none" stroke="#2F6BFF" stroke-width="52" stroke-linecap="round"/>
-            <circle cx="340" cy="196" r="27" fill="#3DDC97" stroke="#0A0F1E" stroke-width="10"/>
-            <circle cx="340" cy="316" r="27" fill="#3DDC97" stroke="#0A0F1E" stroke-width="10"/>
-          </svg>
+    <!-- ======================================================================= -->
+    <!-- VIEW 1: STUDIO WORKBENCH (IDE + Live Simulator + Terminal)              -->
+    <!-- ======================================================================= -->
+    <div id="view-workbench" class="flex-1 flex overflow-hidden">
+      <!-- 2A. LEFT ACTIVITY BAR (48px Rail) -->
+      <aside class="w-12 bg-[#060A15] border-r border-[#1E2A45] flex flex-col items-center justify-between py-2 shrink-0 z-20">
+        <div class="flex flex-col items-center gap-1 w-full">
+          <button id="act-btn-explorer" data-panel="panel-explorer" class="activity-btn w-full h-11 flex items-center justify-center text-white relative transition group border-l-2 border-[#2F6BFF]" title="Explorer (Files & Schema)">
+            <svg class="w-5 h-5 text-[#2F6BFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <span class="sr-only">Explorer</span>
+          </button>
+          <button id="act-btn-agent" data-panel="panel-agent" class="activity-btn w-full h-11 flex items-center justify-center text-[#5A6478] hover:text-white relative transition group border-l-2 border-transparent" title="Autonomous Engine Tasks">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <span class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#3DDC97]"></span>
+            <span class="sr-only">Autonomous Engine</span>
+          </button>
+          <button id="act-btn-simulator" data-panel="panel-simulator" class="activity-btn w-full h-11 flex items-center justify-center text-[#5A6478] hover:text-white relative transition group border-l-2 border-transparent" title="Live API Client Simulator">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span class="sr-only">Live Simulator</span>
+          </button>
+          <button id="act-btn-data" data-panel="panel-data" class="activity-btn w-full h-11 flex items-center justify-center text-[#5A6478] hover:text-white relative transition group border-l-2 border-transparent" title="Dataset Ingestion & Presets">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+            </svg>
+            <span class="sr-only">Data Ingestion</span>
+          </button>
         </div>
-      </div>
-    </aside>
-
-    <!-- --------------------------------------------------------------------- -->
-    <!-- 2B. PRIMARY SIDEBAR (Explorer / Presets / Config)                      -->
-    <!-- --------------------------------------------------------------------- -->
-    <aside id="sidebar-container" class="w-64 bg-ide-sidebar border-r border-ide-border flex flex-col shrink-0 overflow-y-auto">
-      
-      <!-- Explorer Header -->
-      <div class="h-9 px-3 flex items-center justify-between border-b border-ide-border/60 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-        <span id="sidebar-title">Explorer</span>
-        <div class="flex items-center gap-1">
-          <button id="btn-refresh-workspace" class="p-1 hover:text-zinc-200 text-zinc-500 rounded" title="Re-infer & regenerate">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        <div class="flex flex-col items-center gap-2 w-full">
+          <button id="btn-toggle-terminal" class="w-full h-10 flex items-center justify-center text-[#5A6478] hover:text-[#93A0B8] transition" title="Toggle Integrated Terminal (Ctrl+`)">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
           </button>
         </div>
-      </div>
+      </aside>
 
-      <!-- Presets Selector Toolbar inside Sidebar -->
-      <div class="p-2.5 border-b border-ide-border/40 bg-zinc-950/40">
-        <label class="text-[10px] uppercase font-mono text-zinc-500 font-semibold block mb-1.5">Preset Datasets</label>
-        <div class="grid grid-cols-3 gap-1 text-[11px]">
-          <button id="preset-customers" class="preset-btn px-2 py-1 rounded bg-zinc-800 text-indigo-300 font-medium border border-indigo-500/30 text-center hover:bg-zinc-700 transition">
-            Users
-          </button>
-          <button id="preset-inventory" class="preset-btn px-2 py-1 rounded bg-zinc-900 text-zinc-400 font-medium border border-zinc-800 text-center hover:bg-zinc-800 transition">
-            Store
-          </button>
-          <button id="preset-transactions" class="preset-btn px-2 py-1 rounded bg-zinc-900 text-zinc-400 font-medium border border-zinc-800 text-center hover:bg-zinc-800 transition">
-            Finance
-          </button>
+      <!-- 2B. PRIMARY SIDEBAR (Explorer / Presets / Config) -->
+      <aside id="sidebar-container" class="w-64 bg-[#0A0F1E] border-r border-[#1E2A45] flex flex-col shrink-0 overflow-y-auto">
+        <div class="h-9 px-3 border-b border-[#1E2A45] flex items-center justify-between text-[11px] font-semibold text-[#93A0B8] uppercase tracking-wider">
+          <span id="sidebar-title">Explorer</span>
+          <span class="text-[10px] font-mono text-[#5A6478]">WASM ACTIVE</span>
         </div>
-      </div>
-
-      <!-- File Tree Structure (VS Code style) -->
-      <div class="p-2 flex-1 flex flex-col gap-1 text-xs">
-        <div class="flex items-center gap-1.5 px-1 py-1 text-zinc-400 font-semibold text-[11px] uppercase tracking-wider">
-          <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-          <span>Generated Workspace</span>
-        </div>
-
-        <!-- app/ directory -->
-        <div class="pl-2 flex flex-col">
-          <div class="flex items-center gap-1.5 px-2 py-1 text-zinc-300 font-medium">
-            <span class="text-amber-400 text-xs">📁</span>
-            <span>app</span>
-          </div>
-          <div class="pl-4 flex flex-col">
-            <button data-file="app/main.py" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-200 hover:bg-zinc-800/80 bg-zinc-800/50 text-left transition">
-              <span class="text-blue-400 font-mono text-xs">🐍</span>
-              <span class="truncate">main.py</span>
-            </button>
-            <button data-file="app/models.py" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
-              <span class="text-blue-400 font-mono text-xs">🐍</span>
-              <span class="truncate">models.py</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- sdk/ directory -->
-        <div class="pl-2 flex flex-col">
-          <div class="flex items-center gap-1.5 px-2 py-1 text-zinc-300 font-medium">
-            <span class="text-amber-400 text-xs">📁</span>
-            <span>sdk</span>
-          </div>
-          <div class="pl-4 flex flex-col">
-            <button data-file="sdk/client.ts" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
-              <span class="text-sky-400 font-mono text-xs">🔷</span>
-              <span class="truncate">client.ts</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- terraform/ directory -->
-        <div class="pl-2 flex flex-col">
-          <div class="flex items-center gap-1.5 px-2 py-1 text-zinc-300 font-medium">
-            <span class="text-amber-400 text-xs">📁</span>
-            <span>terraform</span>
-          </div>
-          <div class="pl-4 flex flex-col">
-            <button data-file="terraform/main.tf" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
-              <span class="text-purple-400 font-mono text-xs">☁️</span>
-              <span class="truncate">main.tf</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Root Project Files -->
-        <div class="pl-2 flex flex-col pt-1">
-          <button data-file="data/dataset.json" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
-            <span class="text-yellow-400 font-mono text-xs">📊</span>
-            <span class="truncate">dataset.json</span>
-          </button>
-          <button data-file="openapi.json" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
-            <span class="text-emerald-400 font-mono text-xs">⚡</span>
-            <span class="truncate">openapi.json</span>
-          </button>
-          <button data-file="Dockerfile" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
-            <span class="text-cyan-400 font-mono text-xs">🐳</span>
-            <span class="truncate">Dockerfile</span>
-          </button>
-          <button data-file="README.md" class="file-item flex items-center gap-2 px-2 py-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/80 text-left transition">
-            <span class="text-gray-400 font-mono text-xs">📖</span>
-            <span class="truncate">README.md</span>
-          </button>
-        </div>
-
-        <!-- Inferred Contract Schema Section in Sidebar -->
-        <div class="mt-4 pt-3 border-t border-ide-border/60">
-          <div class="flex items-center justify-between px-2 mb-2">
-            <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider font-mono">Contract Schema</span>
-            <span id="sidebar-field-count" class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 font-mono">6 fields</span>
-          </div>
-          <div id="sidebar-schema-list" class="flex flex-col gap-1 px-2 text-[11px] font-mono">
-            <!-- Dynamically populated schema fields -->
-          </div>
-        </div>
-
-        <!-- Sturdy Architecture Controls Section -->
-        <div class="mt-4 pt-3 border-t border-ide-border/60 px-2">
-          <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider font-mono block mb-2">Architecture Config</span>
-          <div class="flex flex-col gap-2">
-            <div>
-              <label class="text-[10px] text-zinc-500 block">RESOURCE NAME</label>
-              <input type="text" id="cfg-res-name" value="customer" class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-200 focus:outline-none">
+        <div id="panel-explorer" class="sidebar-panel p-2 flex flex-col gap-3">
+          <div>
+            <div class="text-[10px] font-mono text-[#5A6478] px-2 py-1 flex items-center justify-between uppercase">
+              <span>Workspace Files</span>
+              <span>7 files</span>
             </div>
-            <div>
-              <label class="text-[10px] text-zinc-500 block">SYNTHETIC MOCKS</label>
-              <input type="number" id="cfg-mock-count" value="25" min="0" max="100" class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-200 focus:outline-none">
+            <ul id="file-tree" class="flex flex-col gap-0.5 text-xs font-mono">
+              <li><button data-file="app/main.py" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-blue-400 font-semibold flex items-center gap-2"><span>🐍</span> <span>app/main.py</span></button></li>
+              <li><button data-file="sdk/client.ts" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#93A0B8] flex items-center gap-2"><span>🔷</span> <span>sdk/client.ts</span></button></li>
+              <li><button data-file="sdk/client.py" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#93A0B8] flex items-center gap-2"><span>🐍</span> <span>sdk/client.py</span></button></li>
+              <li><button data-file="terraform/main.tf" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#93A0B8] flex items-center gap-2"><span>🟣</span> <span>terraform/main.tf</span></button></li>
+              <li><button data-file="openapi.json" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#93A0B8] flex items-center gap-2"><span>📜</span> <span>openapi.json</span></button></li>
+              <li><button data-file="Dockerfile" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#93A0B8] flex items-center gap-2"><span>🐳</span> <span>Dockerfile</span></button></li>
+              <li><button data-file="README.md" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#93A0B8] flex items-center gap-2"><span>📘</span> <span>README.md</span></button></li>
+            </ul>
+          </div>
+          <div>
+            <div class="text-[10px] font-mono text-[#5A6478] px-2 py-1 flex items-center justify-between uppercase">
+              <span>Active Schema</span>
+              <span id="sidebar-field-count" class="text-[#3DDC97]">7 fields</span>
             </div>
-            <label class="flex items-center gap-2 cursor-pointer mt-1">
-              <input type="checkbox" id="cfg-auth" checked class="rounded bg-zinc-900 border-zinc-700 text-indigo-500 focus:ring-0">
-              <span class="text-xs text-zinc-300">API Key Authentication</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="cfg-sqlite" checked class="rounded bg-zinc-900 border-zinc-700 text-indigo-500 focus:ring-0">
-              <span class="text-xs text-zinc-300">SQLite Durable Layer</span>
-            </label>
+            <div id="sidebar-schema-list" class="p-2 rounded-xl bg-[#0E1528] border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono"></div>
           </div>
         </div>
-
-      </div>
-    </aside>
-
-    <!-- --------------------------------------------------------------------- -->
-    <!-- 2C. CENTER PANE: Multi-Tab Code Editor (VS Code Workbench)            -->
-    <!-- --------------------------------------------------------------------- -->
-    <main class="flex-1 flex flex-col bg-ide-editor overflow-hidden">
-      
-      <!-- Editor Tab Bar (VS Code style) -->
-      <div class="h-9 bg-ide-titlebar border-b border-ide-border flex items-center justify-between px-1 z-10 shrink-0">
-        <!-- Scrollable Tabs -->
-        <div id="editor-tabs" class="flex items-center h-full overflow-x-auto text-xs">
-          <button data-tab-file="app/main.py" class="editor-tab tab-active h-full px-3 flex items-center gap-2 text-zinc-300 border-r border-ide-border transition">
-            <span class="text-blue-400 font-mono">🐍</span>
-            <span>main.py</span>
-            <span class="text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>
-          </button>
-          <button data-tab-file="sdk/client.ts" class="editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition">
-            <span class="text-sky-400 font-mono">🔷</span>
-            <span>client.ts</span>
-            <span class="text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>
-          </button>
-          <button data-tab-file="terraform/main.tf" class="editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition">
-            <span class="text-purple-400 font-mono">☁️</span>
-            <span>main.tf</span>
-            <span class="text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>
-          </button>
-          <button data-tab-file="openapi.json" class="editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition">
-            <span class="text-emerald-400 font-mono">⚡</span>
-            <span>openapi.json</span>
-            <span class="text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>
-          </button>
+        <div id="panel-agent" class="sidebar-panel p-3 hidden flex flex-col gap-3">
+          <div class="text-xs font-semibold text-white">Autonomous Generation Spec</div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[11px] font-medium text-[#93A0B8]">Resource Singular Name</label>
+            <input type="text" id="cfg-res-name" value="customer" class="bg-[#0E1528] border border-[#1E2A45] rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[#2F6BFF]">
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[11px] font-medium text-[#93A0B8]">Mock Synthesis Count</label>
+            <input type="number" id="cfg-mock-count" value="25" class="bg-[#0E1528] border border-[#1E2A45] rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[#2F6BFF]">
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-xs text-white">API Key Auth Guard</span>
+            <input type="checkbox" id="cfg-auth" checked class="rounded bg-[#0E1528] border-[#1E2A45] text-[#2F6BFF]">
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-white">In-Memory SQLite DB</span>
+            <input type="checkbox" id="cfg-sqlite" checked class="rounded bg-[#0E1528] border-[#1E2A45] text-[#2F6BFF]">
+          </div>
         </div>
+        <div id="panel-simulator" class="sidebar-panel p-3 hidden flex flex-col gap-2">
+          <div class="text-xs font-semibold text-white">Simulation Presets</div>
+          <div class="flex flex-col gap-1 text-xs">
+            <button onclick="selectScenario('cursor')" class="p-2 rounded-lg bg-[#0E1528] border border-[#1E2A45] text-left hover:border-[#3DDC97] transition flex flex-col gap-0.5">
+              <span class="font-semibold text-[#3DDC97]">1. Keyset Cursor Pagination</span>
+              <span class="text-[10px] text-[#93A0B8]">GET /customers?cursor=...&limit=5</span>
+            </button>
+            <button onclick="selectScenario('analytics')" class="p-2 rounded-lg bg-[#0E1528] border border-[#1E2A45] text-left hover:border-[#2F6BFF] transition flex flex-col gap-0.5">
+              <span class="font-semibold text-blue-400">2. Vectorized DuckDB Analytics</span>
+              <span class="text-[10px] text-[#93A0B8]">GET /customers/analytics/summary</span>
+            </button>
+            <button onclick="selectScenario('problem-422')" class="p-2 rounded-lg bg-[#0E1528] border border-[#1E2A45] text-left hover:border-[#FF5C5C] transition flex flex-col gap-0.5">
+              <span class="font-semibold text-[#FF5C5C]">3. RFC 7807 Error (422)</span>
+              <span class="text-[10px] text-[#93A0B8]">POST with invalid parameters</span>
+            </button>
+          </div>
+        </div>
+        <div id="panel-data" class="sidebar-panel p-3 hidden flex flex-col gap-3">
+          <div class="text-xs font-semibold text-white">Ingest Sample Dataset</div>
+          <div class="flex flex-col gap-1.5">
+            <button id="btn-preset-customers" class="p-2 rounded-lg bg-[#0E1528] border border-[#1E2A45] hover:border-[#2F6BFF] text-left text-xs text-white font-medium">👥 Customers (E-commerce / CRM)</button>
+            <button id="btn-preset-inventory" class="p-2 rounded-lg bg-[#0E1528] border border-[#1E2A45] hover:border-[#2F6BFF] text-left text-xs text-white font-medium">📦 Inventory (SKUs & Stock)</button>
+            <button id="btn-preset-transactions" class="p-2 rounded-lg bg-[#0E1528] border border-[#1E2A45] hover:border-[#2F6BFF] text-left text-xs text-white font-medium">💳 Financial Transactions</button>
+          </div>
+          <button id="btn-open-custom-data" class="w-full mt-2 py-1.5 rounded-lg bg-[#2F6BFF] text-white text-xs font-semibold hover:bg-[#2353cf] transition">Paste Custom CSV / JSON</button>
+        </div>
+      </aside>
 
-        <!-- Action Icons on Tab Bar Right -->
-        <div class="flex items-center gap-1 pr-2">
-          <button id="btn-copy-code" class="px-2 py-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1 font-mono transition" title="Copy Current File Code">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-            </svg>
+      <!-- 2C. MAIN CODE SURFACE -->
+      <main class="flex-1 flex flex-col overflow-hidden bg-[#0A0F1E]">
+        <div class="h-9 bg-[#0E1528] border-b border-[#1E2A45] flex items-center justify-between px-2 shrink-0">
+          <div id="editor-tabs" class="flex items-center h-full overflow-x-auto gap-0.5"></div>
+          <button id="btn-copy-code" class="px-2 py-1 rounded-md text-xs font-mono text-[#93A0B8] hover:text-white hover:bg-[#111A30] transition flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             <span id="copy-status-text">Copy</span>
           </button>
         </div>
-      </div>
-
-      <!-- Editor Breadcrumbs Bar -->
-      <div class="h-6 bg-ide-editor border-b border-ide-border/50 px-4 flex items-center text-[11px] text-zinc-500 font-mono gap-1.5 shrink-0">
-        <span>workspace</span>
-        <span>&rsaquo;</span>
-        <span id="ec-path-folder" class="text-zinc-400">app</span>
-        <span>&rsaquo;</span>
-        <span id="ec-path-filename" class="text-zinc-300">main.py</span>
-        <span id="ec-path-symbol" class="text-indigo-400">› @app.get("/customers")</span>
-      </div>
-
-      <!-- Code Surface with Line Numbers Gutter -->
-      <div class="flex-1 flex overflow-hidden bg-ide-editor relative">
-        <!-- Line Numbers Gutter -->
-        <div id="gutter-lines" class="w-12 bg-ide-gutter border-r border-ide-border/60 py-3 line-numbers text-xs font-mono shrink-0 select-none overflow-hidden">
-          <!-- Dynamically populated line numbers -->
+        <div class="h-6 bg-[#0A0F1E] border-b border-[#1E2A45]/50 px-4 flex items-center text-[11px] text-[#5A6478] font-mono gap-1.5 shrink-0">
+          <span>workspace</span><span>&rsaquo;</span><span id="ec-path-folder" class="text-[#93A0B8]">app</span><span>&rsaquo;</span><span id="ec-path-filename" class="text-white">main.py</span>
         </div>
-
-        <!-- Code Content Area -->
-        <div class="flex-1 p-3 overflow-auto">
-          <pre id="editor-code" class="code-content text-xs text-zinc-300 font-mono focus:outline-none" tabindex="0"></pre>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- --------------------------------------------------------------------- -->
-    <!-- 2D. RIGHT PANE: datapi Autonomous Agent Trace & API Simulator         -->
-    <!-- --------------------------------------------------------------------- -->
-    <aside class="w-96 bg-ide-sidebar border-l border-ide-border flex flex-col shrink-0 overflow-hidden">
-      
-      <!-- Right Pane Header Tabs -->
-      <div class="h-9 bg-ide-titlebar border-b border-ide-border flex items-center justify-between px-2 shrink-0">
-        <div class="flex items-center gap-1">
-          <button id="rp-tab-agent" class="px-2.5 py-1 rounded text-xs font-semibold text-white bg-ide-panel border border-[#2F6BFF]/40 transition flex items-center gap-1.5 shadow-sm">
-            <span class="w-1.5 h-1.5 rounded-full bg-[#3DDC97]"></span>
-            <span>datapi Agent</span>
-          </button>
-          <button id="rp-tab-simulator" class="px-2.5 py-1 rounded text-xs font-medium text-ide-slateLight hover:text-white transition flex items-center gap-1.5">
-            <span>Live API Client</span>
-          </button>
-        </div>
-
-        <span class="text-[10px] font-mono text-ide-slate uppercase">Sub-5ms WASM</span>
-      </div>
-
-      <!-- VIEW 1: datapi Autonomous Agent Session View -->
-      <div id="view-agent-panel" class="flex-1 flex flex-col p-3 overflow-y-auto gap-3.5">
-        
-        <!-- Agent Goal Card -->
-        <div class="p-2.5 rounded bg-ide-panel border border-ide-border flex flex-col gap-1.5">
-          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-400">
-            <span class="flex items-center gap-1.5 font-semibold text-indigo-400">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-              </svg>
-              CURRENT AGENT GOAL
-            </span>
-            <span class="text-emerald-400">AUTONOMOUS</span>
-          </div>
-          <p id="agent-goal-text" class="text-xs text-zinc-200 font-medium">
-            Synthesize zero-downtime microservice, Pydantic models, and typed TypeScript SDK for customer dataset.
-          </p>
-        </div>
-
-        <!-- datapi Engineering Task Plan Checklist -->
-        <div class="flex flex-col gap-1.5">
-          <span class="text-[10px] font-mono uppercase text-zinc-500 font-semibold tracking-wider">Engineering Plan</span>
-          <div class="flex flex-col gap-1 text-xs">
-            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
-              <span class="text-emerald-400 font-bold">✓</span>
-              <span class="text-zinc-200">Ingest data format & infer strict types</span>
-            </div>
-            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
-              <span class="text-emerald-400 font-bold">✓</span>
-              <span class="text-zinc-200">Detect primary key & foreign keys</span>
-            </div>
-            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
-              <span class="text-emerald-400 font-bold">✓</span>
-              <span class="text-zinc-200">Compile FastAPI routes & Pydantic v2 schemas</span>
-            </div>
-            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
-              <span class="text-emerald-400 font-bold">✓</span>
-              <span class="text-zinc-200">Synthesize typed TypeScript client SDK</span>
-            </div>
-            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
-              <span class="text-emerald-400 font-bold">✓</span>
-              <span class="text-zinc-200">Verify schema diff against breaking changes (0)</span>
-            </div>
-            <div class="flex items-center gap-2 p-1.5 rounded bg-zinc-900/40 border border-zinc-800/60">
-              <span class="text-emerald-400 font-bold">✓</span>
-              <span class="text-zinc-200">Mount client-side WASM mock simulator</span>
-            </div>
+        <div class="flex-1 flex overflow-hidden bg-[#0A0F1E] relative">
+          <div id="gutter-lines" class="w-12 bg-[#060A15] border-r border-[#1E2A45]/60 py-3 line-numbers text-xs font-mono shrink-0 select-none overflow-hidden"></div>
+          <div class="flex-1 p-3 overflow-auto">
+            <pre id="editor-code" class="code-content text-xs text-[#E9EDF5] font-mono focus:outline-none" tabindex="0"></pre>
           </div>
         </div>
+      </main>
 
-        <!-- Realtime Agent Thinking & Execution Trace -->
-        <div class="flex-1 flex flex-col gap-1.5 min-h-[160px]">
-          <span class="text-[10px] font-mono uppercase text-ide-slate font-semibold tracking-wider">Agent Execution Trace</span>
-          <div id="agent-trace-log" class="flex-1 p-2.5 rounded bg-ide-terminal border border-ide-border font-mono text-[11px] text-zinc-400 overflow-y-auto leading-relaxed flex flex-col gap-1">
-            <span class="text-ide-slate">[18:00:01] Initialized datapi Cognitive Runtime</span>
-            <span class="text-[#2F6BFF]">[18:00:02] Analyzing input dataset (5 records detected)</span>
-            <span class="text-zinc-300">[18:00:02] Inferred 7 attributes: id, full_name, email, plan_tier, account_balance, is_active, created_at</span>
-            <span class="text-zinc-300">[18:00:03] Selected 'customer_id' as Primary Key</span>
-            <span class="text-[#3DDC97]">[18:00:03] Generated 25 synthetic records for testing</span>
-            <span class="text-zinc-300">[18:00:03] Generated app/main.py, sdk/client.ts, terraform/main.tf</span>
-            <span class="text-[#3DDC97]">[18:00:04] Workspace build verified: 0 errors, 0 warnings</span>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- VIEW 2: Live API Client / Simulator (Thunder Client / Postman style inside IDE) -->
-      <div id="view-simulator-panel" class="hidden flex-1 flex flex-col p-3 overflow-y-auto gap-3">
-        
-        <!-- Phase 1 & 2 Capability Test Selectors -->
-        <div class="flex flex-col gap-2 bg-ide-titlebar/80 border border-ide-border rounded p-2.5 shadow-sm">
-          <div class="flex items-center justify-between text-[10px] font-mono">
-            <span class="flex items-center gap-1.5 font-semibold text-zinc-200">
-              <svg class="w-3.5 h-3.5 text-[#2F6BFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
-              <span>PHASE 1 & 2 CAPABILITIES</span>
-            </span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded bg-[#2F6BFF]/20 text-[#2F6BFF] border border-[#2F6BFF]/30 font-mono">Sub-5ms Runtime</span>
-          </div>
-
-          <!-- Quick Test Selector Cards -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-            <!-- 1. Cursor-Based Pagination -->
-            <button id="sim-btn-cursor" type="button" class="sim-scenario-btn group px-2 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-[#2F6BFF] text-left transition flex flex-col gap-0.5 focus:outline-none">
-              <div class="flex items-center justify-between w-full">
-                <span class="text-[11px] font-medium text-blue-400 group-hover:text-blue-300">⏩ Cursor Paging</span>
-                <span class="text-[9px] font-mono text-zinc-500">GET</span>
-              </div>
-              <span class="text-[10px] font-mono text-zinc-400 truncate">?cursor=eyJpZ...&limit=5</span>
+      <!-- 2D. RIGHT PANE: Agent Trace & Live API Client -->
+      <aside class="w-96 bg-[#0A0F1E] border-l border-[#1E2A45] flex flex-col shrink-0 overflow-hidden">
+        <div class="h-9 bg-[#0E1528] border-b border-[#1E2A45] flex items-center justify-between px-2 shrink-0">
+          <div class="flex items-center gap-1">
+            <button id="rp-tab-agent" class="px-2.5 py-1 rounded-full text-xs font-semibold text-white bg-[#0E1528] border border-[#2F6BFF]/40 transition flex items-center gap-1.5 shadow-sm">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#3DDC97]"></span>
+              <span>datapi Agent</span>
             </button>
-
-            <!-- 2. RFC 7807 Problem Details -->
-            <button id="sim-btn-problem" type="button" class="sim-scenario-btn group px-2 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-amber-500 text-left transition flex flex-col gap-0.5 focus:outline-none">
-              <div class="flex items-center justify-between w-full">
-                <span class="text-[11px] font-medium text-amber-400 group-hover:text-amber-300">⚠️ RFC 7807 Error</span>
-                <span class="text-[9px] font-mono text-zinc-500">422 / 404</span>
-              </div>
-              <span class="text-[10px] font-mono text-zinc-400 truncate">application/problem+json</span>
-            </button>
-
-            <!-- 3. Embedded DuckDB Analytics -->
-            <button id="sim-btn-analytics" type="button" class="sim-scenario-btn group px-2 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-[#3DDC97] text-left transition flex flex-col gap-0.5 focus:outline-none">
-              <div class="flex items-center justify-between w-full">
-                <span class="text-[11px] font-medium text-[#3DDC97] group-hover:text-emerald-300">🦆 DuckDB Analytics</span>
-                <span class="text-[9px] font-mono text-emerald-500">Vector</span>
-              </div>
-              <span class="text-[10px] font-mono text-zinc-400 truncate">/analytics/summary (2.4ms)</span>
+            <button id="rp-tab-simulator" class="px-2.5 py-1 rounded-full text-xs font-medium text-[#93A0B8] hover:text-white transition flex items-center gap-1.5">
+              <span>Live API Client</span>
             </button>
           </div>
-
-          <!-- Feature Dropdown Selector -->
-          <div class="flex items-center gap-2 pt-1 border-t border-zinc-800/80">
-            <label for="sim-scenario-select" class="text-[10px] font-mono text-zinc-400 shrink-0">Test Scenario:</label>
-            <select id="sim-scenario-select" class="w-full bg-zinc-900 border border-zinc-700 text-xs font-mono rounded px-2 py-1 text-zinc-200 focus:outline-none focus:border-[#2F6BFF]">
-              <option value="cursor">⏩ Cursor-Based Pagination (GET /customers?cursor=eyJpZCI6NX0=&limit=5)</option>
-              <option value="problem-422">⚠️ RFC 7807 Problem Details (Simulate 422 Unprocessable Entity)</option>
-              <option value="problem-404">🔍 RFC 7807 Problem Details (Simulate 404 Not Found)</option>
-              <option value="analytics">🦆 Embedded DuckDB Analytics (GET /customers/analytics/summary)</option>
-              <option value="list">📄 Standard Offset Pagination (GET /customers?limit=5)</option>
-              <option value="get-single">🎯 Single Record Lookup (GET /customers/101)</option>
-            </select>
+          <span class="text-[10px] font-mono text-[#5A6478] uppercase">Sub-5ms WASM</span>
+        </div>
+        <div id="view-agent-panel" class="flex-1 flex flex-col p-3 overflow-y-auto gap-3.5">
+          <div class="p-3 rounded-2xl glass-card flex flex-col gap-1.5">
+            <div class="flex items-center justify-between text-[11px] font-mono text-[#93A0B8]">
+              <span class="flex items-center gap-1.5 font-semibold text-[#2F6BFF]">CURRENT AGENT GOAL</span>
+              <span class="text-[#3DDC97] font-semibold">AUTONOMOUS</span>
+            </div>
+            <p id="agent-goal-text" class="text-xs text-white font-medium">Synthesize zero-downtime microservice, Pydantic models, and typed client SDKs.</p>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[10px] font-mono uppercase text-[#5A6478] font-semibold tracking-wider">Engineering Plan</span>
+            <div class="flex flex-col gap-1 text-xs">
+              <div class="flex items-center gap-2 p-1.5 rounded-xl bg-[#0E1528]/80 border border-[#1E2A45]/60"><span class="text-[#3DDC97] font-bold">✓</span><span class="text-zinc-200">Ingest data format & infer strict types</span></div>
+              <div class="flex items-center gap-2 p-1.5 rounded-xl bg-[#0E1528]/80 border border-[#1E2A45]/60"><span class="text-[#3DDC97] font-bold">✓</span><span class="text-zinc-200">Detect primary key & foreign keys</span></div>
+              <div class="flex items-center gap-2 p-1.5 rounded-xl bg-[#0E1528]/80 border border-[#1E2A45]/60"><span class="text-[#3DDC97] font-bold">✓</span><span class="text-zinc-200">Compile FastAPI routes & Decimal schemas</span></div>
+              <div class="flex items-center gap-2 p-1.5 rounded-xl bg-[#0E1528]/80 border border-[#1E2A45]/60"><span class="text-[#3DDC97] font-bold">✓</span><span class="text-zinc-200">Synthesize TypeScript & Python SDKs</span></div>
+              <div class="flex items-center gap-2 p-1.5 rounded-xl bg-[#0E1528]/80 border border-[#1E2A45]/60"><span class="text-[#3DDC97] font-bold">✓</span><span class="text-zinc-200">Mount client-side WASM mock simulator</span></div>
+            </div>
+          </div>
+          <div class="flex-1 flex flex-col gap-1.5 min-h-[160px]">
+            <span class="text-[10px] font-mono uppercase text-[#5A6478] font-semibold tracking-wider">Agent Execution Trace</span>
+            <div id="agent-trace-log" class="flex-1 p-2.5 rounded-2xl bg-[#060A15] border border-[#1E2A45] font-mono text-[11px] text-zinc-400 overflow-y-auto leading-relaxed flex flex-col gap-1">
+              <span class="text-[#5A6478]">[18:00:01] Initialized datapi Cognitive Runtime</span>
+              <span class="text-[#2F6BFF]">[18:00:02] Analyzing input dataset (5 records detected)</span>
+              <span class="text-zinc-300">[18:00:02] Inferred 7 attributes: id, full_name, email, plan_tier, account_balance, is_active, created_at</span>
+              <span class="text-zinc-300">[18:00:03] Selected 'customer_id' as Primary Key</span>
+              <span class="text-[#3DDC97]">[18:00:03] Generated 25 synthetic records for testing</span>
+              <span class="text-zinc-300">[18:00:03] Generated app/main.py, sdk/client.ts, terraform/main.tf</span>
+              <span class="text-[#3DDC97]">[18:00:04] Workspace build verified: 0 errors, 0 warnings</span>
+            </div>
           </div>
         </div>
-        
-        <!-- URL & Execution Bar -->
-        <div class="flex flex-col gap-1.5">
-          <div class="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-            <span>ENDPOINT REQUEST</span>
-            <span id="sim-db-count" class="text-indigo-400">30 records in memory</span>
-          </div>
-          
-          <div class="flex items-center gap-1.5">
-            <!-- Method Selector -->
-            <select id="sim-method" class="bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold rounded px-2 py-1.5 text-emerald-400 focus:outline-none">
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="DELETE">DELETE</option>
-            </select>
-
-            <!-- URL Input -->
-            <input type="text" id="sim-url" value="/customers?limit=5" class="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none">
-
-            <!-- Send Button -->
-            <button id="btn-sim-send" class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-1">
-              <span>Send</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- POST Request Payload Box -->
-        <div id="sim-payload-box" class="hidden flex flex-col gap-1">
-          <div class="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-            <span>JSON REQUEST BODY</span>
-            <button id="btn-reset-payload" class="text-indigo-400 hover:underline">Reset Sample</button>
-          </div>
-          <textarea id="sim-payload-input" rows="3" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-xs font-mono text-zinc-300 focus:outline-none resize-none"></textarea>
-        </div>
-
-        <!-- Response Preview -->
-        <div class="flex-1 flex flex-col gap-1.5">
-          <div class="flex items-center justify-between text-[10px] font-mono">
-            <span class="text-zinc-400">RESPONSE BODY</span>
+        <div id="view-simulator-panel" class="hidden flex-1 flex flex-col p-3 overflow-y-auto gap-3">
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between text-[10px] font-mono text-[#93A0B8]">
+              <span>ENDPOINT REQUEST</span>
+              <span id="sim-record-count-badge" class="text-[#5A6478]">30 records in memory</span>
+            </div>
             <div class="flex items-center gap-1.5">
-              <span id="sim-content-type-badge" class="hidden px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30">application/problem+json</span>
-              <span id="sim-status-badge" class="text-emerald-400 font-bold">200 OK (2ms)</span>
-              <button id="btn-copy-curl" class="text-zinc-400 hover:text-zinc-200" title="Copy as cURL">
-                📋 cURL
-              </button>
+              <select id="sim-method-select" class="bg-[#0E1528] border border-[#1E2A45] rounded-xl px-2.5 py-1.5 text-xs font-mono font-semibold text-[#3DDC97] focus:outline-none">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="DELETE">DELETE</option>
+              </select>
+              <input type="text" id="sim-url-input" value="/customers?limit=5" class="flex-1 bg-[#0E1528] border border-[#1E2A45] rounded-xl px-2.5 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none focus:border-[#2F6BFF]">
+              <button id="btn-run-simulator" class="px-3.5 py-1.5 rounded-xl bg-[#2F6BFF] hover:bg-[#2353cf] text-white text-xs font-semibold font-mono transition shadow-[0_0_12px_rgba(47,107,255,0.3)]">Send</button>
             </div>
           </div>
-          <pre id="sim-response-output" class="flex-1 p-2.5 rounded bg-ide-terminal border border-zinc-800 font-mono text-[11px] text-zinc-300 overflow-auto leading-relaxed max-h-[300px]"></pre>
+          <div id="sim-body-container" class="hidden flex-col gap-1">
+            <div class="flex items-center justify-between text-[10px] font-mono text-[#93A0B8]">
+              <span>JSON PAYLOAD</span>
+              <span class="text-[#5A6478]">application/json</span>
+            </div>
+            <textarea id="sim-payload-input" rows="3" class="w-full bg-[#0E1528] border border-[#1E2A45] rounded-xl p-2 text-xs font-mono text-zinc-300 focus:outline-none resize-none"></textarea>
+          </div>
+          <div class="flex-1 flex flex-col gap-1.5">
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <span class="text-[#93A0B8]">RESPONSE BODY</span>
+              <div class="flex items-center gap-2">
+                <span id="sim-status-badge" class="text-[#3DDC97] font-bold">200 OK (2ms)</span>
+                <button id="btn-copy-curl" class="text-[#93A0B8] hover:text-white" title="Copy as cURL">📋 cURL</button>
+              </div>
+            </div>
+            <pre id="sim-response-output" class="flex-1 p-2.5 rounded-2xl bg-[#060A15] border border-[#1E2A45] font-mono text-[11px] text-zinc-300 overflow-auto leading-relaxed max-h-[300px]"></pre>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- VIEW 2: VISUAL WORKFLOW PIPELINE CANVAS (Ron Design / ComfyUI Style)    -->
+    <!-- ======================================================================= -->
+    <div id="view-workflow" class="hidden flex-1 overflow-auto bg-dots relative p-8 flex flex-col justify-between">
+      
+      <!-- Top Canvas Controls & Title -->
+      <div class="flex items-center justify-between z-20">
+        <div>
+          <div class="flex items-center gap-2 text-xs text-[#3DDC97] font-mono font-semibold uppercase tracking-wider">
+            <span class="w-2 h-2 rounded-full bg-[#3DDC97] pulse-agent shadow-[0_0_10px_#3DDC97]"></span>
+            <span>Live Data-to-API Topology</span>
+          </div>
+          <h2 class="font-display text-2xl font-bold text-white tracking-tight mt-0.5">Autonomous Pipeline Graph</h2>
+          <p class="text-xs text-[#93A0B8]">Vectorized streaming data pipeline from raw source to containerized deployment.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 p-1.5 px-3 rounded-2xl bg-[#0E1528]/90 backdrop-blur-md border border-[#1E2A45] shadow-xl">
+            <div class="flex -space-x-1.5">
+              <span class="w-5 h-5 rounded-full bg-[#FACC15] text-[#060A15] font-bold text-[9px] flex items-center justify-center border border-[#0A0F1E]" title="Paul (Schema)">P</span>
+              <span class="w-5 h-5 rounded-full bg-[#38BDF8] text-[#060A15] font-bold text-[9px] flex items-center justify-center border border-[#0A0F1E]" title="Kate (SDKs)">K</span>
+              <span class="w-5 h-5 rounded-full bg-[#F43F5E] text-white font-bold text-[9px] flex items-center justify-center border border-[#0A0F1E]" title="Mario (DuckDB)">M</span>
+            </div>
+            <span class="text-[11px] font-mono text-[#93A0B8]">3 Autonomous Agents Active</span>
+          </div>
+
+          <div class="flex items-center gap-2 p-1.5 rounded-2xl bg-[#0E1528]/90 backdrop-blur-md border border-[#1E2A45] shadow-xl">
+            <span class="text-[11px] font-mono text-[#93A0B8] px-2">Engine: <b class="text-[#3DDC97]">WASM + DuckDB</b></span>
+            <button onclick="updateWorkspace()" class="px-3 py-1 rounded-xl bg-[#2F6BFF] hover:bg-[#2353cf] text-white text-xs font-semibold shadow-md transition">
+              ↻ Re-Synthesize
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node Graph Interactive Canvas -->
+      <div id="node-canvas" class="relative my-8 min-h-[480px] w-full flex items-center justify-between gap-6 overflow-x-auto py-6 px-4">
+        
+<!-- SVG Connecting Curves Layer -->
+        <svg id="pipeline-svg-wires" class="absolute inset-0 w-full h-full pointer-events-none z-0">
+          <!-- Dynamically drawn bezier cables with flowing mint dashes -->
+        </svg>
+
+        <!-- Collaborative Autonomous Agent Cursors (Image 3 Style) -->
+        <div class="absolute z-20 pointer-events-none hidden md:flex items-start" style="left: 23%; top: 72%;">
+          <svg class="w-4 h-4 text-[#FACC15] drop-shadow-[0_2px_8px_rgba(250,204,21,0.6)]" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 2l16 11-7.5 1.5 4 8-3.5 1.5-4-8L4 20V2z"/>
+          </svg>
+          <div class="ml-1 -mt-1 px-2 py-0.5 rounded-full bg-[#FACC15] text-[#060A15] font-bold text-[10px] shadow-lg tracking-wide flex items-center gap-1">
+            <span>Paul</span>
+            <span class="opacity-70 text-[9px]">schema.diff</span>
+          </div>
+        </div>
+
+        <div class="absolute z-20 pointer-events-none hidden md:flex items-start" style="left: 56%; top: 18%;">
+          <svg class="w-4 h-4 text-[#F43F5E] drop-shadow-[0_2px_8px_rgba(244,63,94,0.6)]" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 2l16 11-7.5 1.5 4 8-3.5 1.5-4-8L4 20V2z"/>
+          </svg>
+          <div class="ml-1 -mt-1 px-2 py-0.5 rounded-full bg-[#F43F5E] text-white font-bold text-[10px] shadow-lg tracking-wide flex items-center gap-1">
+            <span>Mario</span>
+            <span class="opacity-80 text-[9px]">vector.duckdb</span>
+          </div>
+        </div>
+
+        <div class="absolute z-20 pointer-events-none hidden md:flex items-start" style="left: 74%; top: 70%;">
+          <svg class="w-4 h-4 text-[#38BDF8] drop-shadow-[0_2px_8px_rgba(56,189,248,0.6)]" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 2l16 11-7.5 1.5 4 8-3.5 1.5-4-8L4 20V2z"/>
+          </svg>
+          <div class="ml-1 -mt-1 px-2 py-0.5 rounded-full bg-[#38BDF8] text-[#060A15] font-bold text-[10px] shadow-lg tracking-wide flex items-center gap-1">
+            <span>Kate</span>
+            <span class="opacity-70 text-[9px]">client.ts</span>
+          </div>
+        </div>
+
+        <!-- NODE 1: Raw Ingestion -->
+        <div id="node-raw" onclick="openFileInEditor('examples/customers.csv')" class="glass-card glass-card-hover rounded-2xl p-4 w-64 shrink-0 z-10 flex flex-col gap-3 cursor-pointer border border-[#1E2A45]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+              <span class="font-display font-bold text-xs text-white">1. Raw Ingestion</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#111A30] text-blue-300 border border-blue-500/30">CSV / JSON</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono">
+            <div class="flex justify-between text-[#93A0B8]"><span>Source</span><span class="text-white font-semibold">customers.csv</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Rows Ingested</span><span class="text-[#3DDC97] font-semibold">5 seed rows</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Parse Latency</span><span class="text-[#3DDC97]">0.8ms</span></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-[#5A6478] font-mono">
+            <span>Input Port: None</span>
+            <span class="text-blue-400 font-semibold">Output ➔</span>
+          </div>
+        </div>
+
+        <!-- NODE 2: Schema Inferrer -->
+        <div id="node-schema" onclick="switchView('workbench')" class="glass-card glass-card-hover rounded-2xl p-4 w-64 shrink-0 z-10 flex flex-col gap-3 cursor-pointer border border-[#1E2A45]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#3DDC97]"></span>
+              <span class="font-display font-bold text-xs text-white">2. Schema Inferrer</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#3DDC97]/20 text-[#3DDC97] border border-[#3DDC97]/30">Type-Safe</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono">
+            <div class="flex justify-between text-[#93A0B8]"><span>Primary Key</span><span class="text-[#3DDC97] font-semibold">customer_id</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Inferred Fields</span><span class="text-white">7 attributes</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Breaking Drift</span><span class="text-[#3DDC97]">0 detected</span></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-[#5A6478] font-mono">
+            <span>Input: Records</span>
+            <span class="text-[#3DDC97] font-semibold">Output ➔</span>
+          </div>
+        </div>
+
+        <!-- NODE 3: FastAPI & Protocol Engine -->
+        <div id="node-fastapi" onclick="openFileInEditor('app/main.py')" class="glass-card glass-card-hover rounded-2xl p-4 w-64 shrink-0 z-10 flex flex-col gap-3 cursor-pointer border border-[#1E2A45]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+              <span class="font-display font-bold text-xs text-white">3. FastAPI Engine</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Pydantic v2</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono">
+            <div class="flex justify-between text-[#93A0B8]"><span>Error Protocol</span><span class="text-white font-semibold">RFC 7807</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Pagination</span><span class="text-white">Keyset Cursor</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Decimals</span><span class="text-[#3DDC97]">Precision Safe</span></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-[#5A6478] font-mono">
+            <span>Input: Schemas</span>
+            <span class="text-indigo-400 font-semibold">Output ➔</span>
+          </div>
+        </div>
+
+        <!-- NODE 4: DuckDB Vector Analytics -->
+        <div id="node-duckdb" onclick="selectScenario('analytics')" class="glass-card glass-card-hover rounded-2xl p-4 w-64 shrink-0 z-10 flex flex-col gap-3 cursor-pointer border border-[#1E2A45]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+              <span class="font-display font-bold text-xs text-white">4. DuckDB Vector</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Sub-5ms</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono">
+            <div class="flex justify-between text-[#93A0B8]"><span>Analytics Query</span><span class="text-white font-semibold">/summary</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Windowing</span><span class="text-white">7-Day Moving Avg</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Vector Scan</span><span class="text-[#3DDC97]">2.4ms P99</span></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-[#5A6478] font-mono">
+            <span>Input: Records</span>
+            <span class="text-yellow-400 font-semibold">Output ➔</span>
+          </div>
+        </div>
+
+        <!-- NODE 5: Type-Safe SDKs -->
+        <div id="node-sdk" onclick="openFileInEditor('sdk/client.ts')" class="glass-card glass-card-hover rounded-2xl p-4 w-64 shrink-0 z-10 flex flex-col gap-3 cursor-pointer border border-[#1E2A45]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+              <span class="font-display font-bold text-xs text-white">5. Client SDKs</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">TS + Python</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono">
+            <div class="flex justify-between text-[#93A0B8]"><span>TypeScript</span><span class="text-white font-semibold">sdk/client.ts</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Python SDK</span><span class="text-white">sdk/client.py</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>429 Retries</span><span class="text-[#3DDC97]">Exp + Jitter</span></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-[#5A6478] font-mono">
+            <span>Input: OpenAPI</span>
+            <span class="text-blue-400 font-semibold">Output ➔</span>
+          </div>
+        </div>
+
+        <!-- NODE 6: Cloud Run IaC -->
+        <div id="node-deploy" onclick="openFileInEditor('terraform/main.tf')" class="glass-card glass-card-hover rounded-2xl p-4 w-64 shrink-0 z-10 flex flex-col gap-3 cursor-pointer border border-[#1E2A45]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+              <span class="font-display font-bold text-xs text-white">6. Cloud Run IaC</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">Terraform</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono">
+            <div class="flex justify-between text-[#93A0B8]"><span>GCP Service</span><span class="text-white font-semibold">Cloud Run v2</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Scaling</span><span class="text-white">0 -> 10 Instances</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Secrets</span><span class="text-[#3DDC97]">Secret Manager</span></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-[#5A6478] font-mono">
+            <span>Input: Docker</span>
+            <span class="text-purple-400 font-semibold">Production Ready</span>
+          </div>
         </div>
 
       </div>
 
-    </aside>
+      <!-- Bottom Floating Compliance Card & Toolbar (Image 2 Style) -->
+      <div class="flex items-end justify-between z-20">
+<!-- Floating Compliance Card (Image 2 Style with 3D Wireframe Terrain) -->
+        <div class="glass-card rounded-2xl p-4 w-80 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-[#3DDC97]"></span>
+              <span class="text-xs font-display font-bold text-white">Compliance & Schema Audit</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#3DDC97]/20 text-[#3DDC97]">100% Passed</span>
+          </div>
+
+          <!-- 3D Isometric Wireframe Terrain (Image 2 Reference) -->
+          <div class="w-full h-20 rounded-xl bg-[#060A15]/90 border border-[#1E2A45] relative overflow-hidden flex items-center justify-center">
+            <svg class="w-full h-full opacity-85" viewBox="0 0 260 80">
+              <defs>
+                <linearGradient id="terrain-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#3DDC97" stop-opacity="0.8"/>
+                  <stop offset="60%" stop-color="#2F6BFF" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#1E2A45" stop-opacity="0.05"/>
+                </linearGradient>
+              </defs>
+              <!-- Wireframe Grid Lines -->
+              <path d="M 20 65 L 130 15 L 240 65" stroke="#1E2A45" stroke-width="1" fill="none"/>
+              <path d="M 40 70 L 130 25 L 220 70" stroke="#1E2A45" stroke-width="1" fill="none"/>
+              <path d="M 60 75 L 130 35 L 200 75" stroke="#1E2A45" stroke-width="1" fill="none"/>
+              <!-- Terrain Contour Curve -->
+              <path d="M 30 60 Q 80 25 145 18 T 230 60" stroke="#2F6BFF" stroke-width="1.5" fill="none"/>
+              <polygon points="40,65 95,20 145,18 220,65 130,75" fill="url(#terrain-grad)"/>
+              <!-- Glowing Peak Coordinate Marker (Ron Design Image 2 style) -->
+              <circle cx="145" cy="18" r="4" fill="#3DDC97"/>
+              <circle cx="145" cy="18" r="7" fill="none" stroke="#3DDC97" stroke-width="1" stroke-dasharray="2 2"/>
+            </svg>
+            <div class="absolute bottom-1.5 left-2.5 font-mono text-[9px] text-[#3DDC97] flex items-center gap-1">
+              <span>● OpenAPI 3.1 & RFC 7807 Topography Verified</span>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-[#93A0B8] leading-tight">
+            Automatically verified 14 of 14 OpenAPI 3.1, Pydantic v2 and Decimal financial integrity rules.
+          </p>
+          <div class="w-full bg-[#060A15] rounded-full h-1.5 overflow-hidden">
+            <div class="bg-[#3DDC97] h-full rounded-full" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Floating Tool Dock -->
+        <div class="flex items-center p-1.5 rounded-full glass-card gap-2 shadow-2xl">
+          <button onclick="switchView('workbench')" class="px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#0E1528] hover:bg-[#111A30] transition flex items-center gap-1.5">
+            <span>💻 View Code</span>
+          </button>
+          <button onclick="selectScenario('analytics')" class="px-3 py-1.5 rounded-full text-xs font-semibold text-[#060A15] bg-[#3DDC97] hover:bg-[#34c285] transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(61,220,151,0.3)]">
+            <span>▶ Test DuckDB</span>
+          </button>
+          <button onclick="exportZipBundle()" class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-white bg-[#2F6BFF] hover:bg-[#2353cf] transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(47,107,255,0.3)]">
+            <span>📦 Download Microservice</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- VIEW 3: OBSERVABILITY & METRICS CONSOLE (Images 1, 4 & 5 Style)         -->
+    <!-- ======================================================================= -->
+    <div id="view-observability" class="hidden flex-1 overflow-auto bg-dots p-8 flex flex-col gap-6">
+      
+      <!-- Top Title & Timeframe Selector -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-xs text-[#3DDC97] font-mono font-semibold uppercase tracking-wider">
+            <span>Production Metrics & Observability</span>
+          </div>
+          <h2 class="font-display text-2xl font-bold text-white tracking-tight mt-0.5">Autonomous API Telemetry</h2>
+          <p class="text-xs text-[#93A0B8]">Live telemetry, latency percentiles, and schema health diagnostics.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="flex items-center p-1 rounded-full bg-[#0A0F1E] border border-[#1E2A45] text-xs font-mono">
+            <button class="px-3 py-1 rounded-full text-white font-semibold bg-[#0E1528] shadow-sm">Last 24h</button>
+            <button class="px-3 py-1 rounded-full text-[#93A0B8] hover:text-white transition">7 Days</button>
+            <button class="px-3 py-1 rounded-full text-[#93A0B8] hover:text-white transition">30 Days</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 Hero Metric Cards with Diagonal Arrow ↗ (Image 1 & 5) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Card 1: Schema Integrity -->
+        <div class="glass-card glass-card-hover rounded-2xl p-4 flex flex-col justify-between gap-4 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-[#93A0B8]">SCHEMA INTEGRITY</span>
+            <div class="w-7 h-7 rounded-full bg-[#0E1528] border border-[#1E2A45] flex items-center justify-center text-xs text-white">↗</div>
+          </div>
+          <div>
+            <div class="font-display text-3xl font-bold text-white tracking-tight">100%</div>
+            <div class="flex items-center gap-1.5 text-xs text-[#3DDC97] mt-1 font-mono">
+              <span>● 0 Breaking Changes</span>
+              <span class="text-[#5A6478]">· Inferred</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: P99 Runtime Latency -->
+        <div class="glass-card glass-card-hover rounded-2xl p-4 flex flex-col justify-between gap-4 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-[#93A0B8]">P99 ENGINE LATENCY</span>
+            <div class="w-7 h-7 rounded-full bg-[#0E1528] border border-[#1E2A45] flex items-center justify-center text-xs text-white">↗</div>
+          </div>
+          <div>
+            <div class="font-display text-3xl font-bold text-[#3DDC97] tracking-tight">1.8 ms</div>
+            <div class="flex items-center gap-1.5 text-xs text-[#3DDC97] mt-1 font-mono">
+              <span class="px-1.5 py-0.2 rounded-full bg-[#3DDC97]/20 text-[#3DDC97]">SUB-5MS WASM</span>
+              <span class="text-[#5A6478]">· AVX-512</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Active Endpoints -->
+        <div class="glass-card glass-card-hover rounded-2xl p-4 flex flex-col justify-between gap-4 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-[#93A0B8]">ACTIVE ENDPOINTS</span>
+            <div class="w-7 h-7 rounded-full bg-[#0E1528] border border-[#1E2A45] flex items-center justify-center text-xs text-white">↗</div>
+          </div>
+          <div>
+            <div class="font-display text-3xl font-bold text-white tracking-tight">6 Routes</div>
+            <div class="flex items-center gap-1.5 text-xs text-blue-400 mt-1 font-mono">
+              <span>CRUD + /analytics</span>
+              <span class="text-[#5A6478]">· OpenAPI 3.1</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Synthesized Records -->
+        <div class="glass-card glass-card-hover rounded-2xl p-4 flex flex-col justify-between gap-4 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-[#93A0B8]">SYNTHESIZED RECORDS</span>
+            <div class="w-7 h-7 rounded-full bg-[#0E1528] border border-[#1E2A45] flex items-center justify-center text-xs text-white">↗</div>
+          </div>
+          <div>
+            <div class="font-display text-3xl font-bold text-white tracking-tight">30 Records</div>
+            <div class="flex items-center gap-1.5 text-xs text-[#93A0B8] mt-1 font-mono">
+              <span>5 Seeded + 25 Mocks</span>
+              <span class="text-[#3DDC97]">● Mounted</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Mid Section: Speedometer Gauge + Barcode Distribution + AI Insights -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Speedometer Circular Radial Gauge (Image 4 Style) -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col items-center justify-between gap-4 text-center">
+          <div class="w-full flex items-center justify-between">
+            <span class="text-xs font-mono text-[#93A0B8]">WASM ENGINE PERFORMANCE</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#3DDC97]/20 text-[#3DDC97]">OPTIMAL</span>
+          </div>
+
+          <div class="relative w-48 h-36 flex items-center justify-center">
+            <!-- Radial SVG Arc Gauge -->
+            <svg class="w-48 h-36" viewBox="0 0 200 140">
+              <!-- Background Arc -->
+              <path d="M 20 120 A 80 80 0 0 1 180 120" fill="none" stroke="#1E2A45" stroke-width="14" stroke-linecap="round"/>
+              <!-- Active Mint Arc (sub-5ms) -->
+              <path d="M 20 120 A 80 80 0 0 1 150 50" fill="none" stroke="#3DDC97" stroke-width="14" stroke-linecap="round" stroke-dasharray="250" stroke-dashoffset="40" class="shadow-lg"/>
+              <!-- Tick Marks -->
+              <line x1="20" y1="120" x2="30" y2="120" stroke="#5A6478" stroke-width="2"/>
+              <line x1="100" y1="40" x2="100" y2="50" stroke="#5A6478" stroke-width="2"/>
+              <line x1="180" y1="120" x2="170" y2="120" stroke="#5A6478" stroke-width="2"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pt-8">
+              <span class="font-display text-3xl font-bold text-white">1.8 ms</span>
+              <span class="text-[11px] font-mono text-[#93A0B8]">Avg P99 Latency</span>
+            </div>
+          </div>
+
+          <div class="w-full p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex items-center justify-between text-xs font-mono">
+            <span class="text-[#93A0B8]">Simulated Throughput</span>
+            <span class="text-[#3DDC97] font-bold">4,280 req/sec</span>
+          </div>
+        </div>
+
+        <!-- Barcode Latency Distribution Chart (Image 4 & 5 Style) -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between gap-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-[#93A0B8]">REQUEST TIME DISTRIBUTION</span>
+            <span class="text-[10px] font-mono text-[#3DDC97]">100% &lt; 5ms</span>
+          </div>
+
+          <!-- Vertical Barcode Tick Graph -->
+          <div class="flex items-end justify-between h-28 pt-2 px-1 gap-1">
+            <div class="flex-1 bg-[#1E2A45] hover:bg-[#3DDC97] rounded-full h-[30%] transition" title="0.5ms (15%)"></div>
+            <div class="flex-1 bg-[#1E2A45] hover:bg-[#3DDC97] rounded-full h-[45%] transition"></div>
+            <div class="flex-1 bg-[#1E2A45] hover:bg-[#3DDC97] rounded-full h-[60%] transition"></div>
+            <div class="flex-1 bg-[#3DDC97] rounded-full h-[95%] shadow-[0_0_12px_#3DDC97]" title="1.8ms Median (45%)"></div>
+            <div class="flex-1 bg-[#3DDC97] rounded-full h-[85%] shadow-[0_0_10px_#3DDC97]"></div>
+            <div class="flex-1 bg-[#2F6BFF] rounded-full h-[50%]"></div>
+            <div class="flex-1 bg-[#1E2A45] rounded-full h-[35%]"></div>
+            <div class="flex-1 bg-[#1E2A45] rounded-full h-[20%]"></div>
+            <div class="flex-1 bg-[#1E2A45] rounded-full h-[15%]"></div>
+            <div class="flex-1 bg-[#1E2A45] rounded-full h-[10%]"></div>
+            <div class="flex-1 bg-[#1E2A45] rounded-full h-[8%]"></div>
+            <div class="flex-1 bg-[#1E2A45] rounded-full h-[5%]"></div>
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] font-mono text-[#5A6478]">
+            <span>&lt; 0.5ms</span>
+            <span class="text-[#3DDC97] font-semibold">1.8ms (Peak)</span>
+            <span>&gt; 5.0ms</span>
+          </div>
+        </div>
+
+        <!-- AI Insights & Drift Verification Card (Image 4 Style) -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between gap-4 border border-[#2F6BFF]/40 relative overflow-hidden shadow-[0_0_30px_rgba(47,107,255,0.15)]">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-blue-400 font-semibold flex items-center gap-1.5">
+              <span>✦</span> AI SCHEMA INSIGHTS
+            </span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300">AUTONOMOUS</span>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h4 class="font-display text-base font-bold text-white leading-snug">Zero breaking drift across 7 inferred attributes.</h4>
+            <p class="text-xs text-[#93A0B8] leading-relaxed">
+              Synthesized microservice includes RFC 7807 error protocol, base64 keyset pagination, and financial Decimal guards to prevent float rounding bugs.
+            </p>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex items-center justify-between text-xs font-mono">
+            <span class="text-[#93A0B8]">Self-Maintaining Bot</span>
+            <span class="text-[#3DDC97] font-semibold">Auto-PR Armed</span>
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- Heatmap & Striped Volume Distribution (Image 5 Reference) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Heatmap: API Traffic Density across Days & Hours (Image 5 Style) -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between gap-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#3DDC97]"></span>
+              <span class="font-display font-bold text-sm text-white">API Traffic Density Matrix</span>
+              <span class="text-xs font-mono text-[#5A6478]">· Hourly Ingestion</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-[10px] font-mono text-[#93A0B8]">
+              <span>Low</span>
+              <span class="w-2.5 h-2.5 rounded bg-[#1E2A45]"></span>
+              <span class="w-2.5 h-2.5 rounded bg-[#3DDC97]/30"></span>
+              <span class="w-2.5 h-2.5 rounded bg-[#3DDC97]/70"></span>
+              <span class="w-2.5 h-2.5 rounded bg-[#3DDC97]"></span>
+              <span class="w-2.5 h-2.5 rounded bg-[#D4FF3A]"></span>
+              <span>Peak</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-7 gap-2 pt-2">
+            <!-- Sun -->
+            <div class="flex flex-col gap-1.5 items-center">
+              <span class="text-[10px] font-mono text-[#5A6478]">Sun</span>
+              <div class="w-full h-6 rounded bg-[#1E2A45]/80"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/40"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]"></div>
+              <div class="w-full h-6 rounded bg-[#1E2A45]/80"></div>
+            </div>
+            <!-- Mon -->
+            <div class="flex flex-col gap-1.5 items-center">
+              <span class="text-[10px] font-mono text-[#5A6478]">Mon</span>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/30"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]"></div>
+              <div class="w-full h-6 rounded bg-[#D4FF3A] shadow-[0_0_8px_rgba(212,255,58,0.5)]"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/60"></div>
+            </div>
+            <!-- Tue -->
+            <div class="flex flex-col gap-1.5 items-center">
+              <span class="text-[10px] font-mono text-[#5A6478]">Tue</span>
+              <div class="w-full h-6 rounded bg-[#1E2A45]/80"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/70"></div>
+              <div class="w-full h-6 rounded bg-[#D4FF3A] shadow-[0_0_8px_rgba(212,255,58,0.5)]"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]"></div>
+            </div>
+            <!-- Wed -->
+            <div class="flex flex-col gap-1.5 items-center">
+              <span class="text-[10px] font-mono text-[#5A6478]">Wed</span>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/40"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/80"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/30"></div>
+            </div>
+            <!-- Thu -->
+            <div class="flex flex-col gap-1.5 items-center">
+              <span class="text-[10px] font-mono text-[#5A6478]">Thu</span>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/20"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/70"></div>
+              <div class="w-full h-6 rounded bg-[#D4FF3A] shadow-[0_0_8px_rgba(212,255,58,0.5)]"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]"></div>
+            </div>
+            <!-- Fri -->
+            <div class="flex flex-col gap-1.5 items-center">
+              <span class="text-[10px] font-mono text-[#5A6478]">Fri</span>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/50"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/60"></div>
+              <div class="w-full h-6 rounded bg-[#1E2A45]/80"></div>
+            </div>
+            <!-- Sat -->
+            <div class="flex flex-col gap-1.5 items-center">
+              <span class="text-[10px] font-mono text-[#5A6478]">Sat</span>
+              <div class="w-full h-6 rounded bg-[#1E2A45]/80"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/30"></div>
+              <div class="w-full h-6 rounded bg-[#3DDC97]/50"></div>
+              <div class="w-full h-6 rounded bg-[#1E2A45]/80"></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] font-mono text-[#93A0B8]">
+            <span>Peak Hour: 12:00 PM EST</span>
+            <span class="text-[#3DDC97] font-semibold">100% Zero Dropped Packets</span>
+          </div>
+        </div>
+
+        <!-- Striped Pill Bar Chart (Image 5 Style) -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between gap-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+              <span class="font-display font-bold text-sm text-white">Monthly Request Volume & Velocity</span>
+            </div>
+            <span class="px-2.5 py-0.5 rounded-full bg-[#3DDC97]/20 text-[#3DDC97] text-xs font-mono font-bold">+28.4% Growth</span>
+          </div>
+
+          <!-- Striped Pills Graph -->
+          <div class="flex items-end justify-between h-32 px-2 gap-3 pt-4">
+            <!-- Jan -->
+            <div class="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+              <div class="w-full h-[35%] rounded-full bg-[#1E2A45] border border-[#2F6BFF]/30"></div>
+              <span class="text-[10px] font-mono text-[#5A6478]">Jan</span>
+            </div>
+            <!-- Feb -->
+            <div class="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+              <div class="w-full h-[48%] rounded-full bg-[#1E2A45] border border-[#2F6BFF]/30"></div>
+              <span class="text-[10px] font-mono text-[#5A6478]">Feb</span>
+            </div>
+            <!-- Mar -->
+            <div class="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+              <div class="w-full h-[62%] rounded-full bg-[#1E2A45] border border-[#2F6BFF]/30"></div>
+              <span class="text-[10px] font-mono text-[#5A6478]">Mar</span>
+            </div>
+            <!-- Apr (Highlight Pill with Tooltip badge from Image 5) -->
+            <div class="flex-1 flex flex-col items-center gap-1.5 h-full justify-end relative">
+              <div class="absolute -top-7 px-2 py-0.5 rounded-full bg-[#2F6BFF] text-white text-[9px] font-mono font-bold shadow-lg flex items-center gap-1">
+                <span>379,502</span>
+              </div>
+              <div class="w-full h-[95%] rounded-full bg-gradient-to-t from-[#2F6BFF] to-[#3DDC97] shadow-[0_0_15px_rgba(61,220,151,0.5)]"></div>
+              <span class="text-[10px] font-mono text-[#3DDC97] font-bold">Apr</span>
+            </div>
+            <!-- May -->
+            <div class="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+              <div class="w-full h-[72%] rounded-full bg-[#1E2A45] border border-[#2F6BFF]/30"></div>
+              <span class="text-[10px] font-mono text-[#5A6478]">May</span>
+            </div>
+            <!-- Jun -->
+            <div class="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+              <div class="w-full h-[85%] rounded-full bg-[#1E2A45] border border-[#2F6BFF]/30"></div>
+              <span class="text-[10px] font-mono text-[#5A6478]">Jun</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] font-mono text-[#93A0B8]">
+            <span>Total Evaluated Synthesized Calls</span>
+            <span class="text-white font-bold">1,842,910 reqs</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Table: Active Endpoints Breakdown (Image 5 Style) -->
+      <div class="glass-card rounded-2xl p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="font-display font-bold text-sm text-white">Synthesized Route Endpoints</span>
+            <span class="text-xs font-mono text-[#5A6478]">· FastAPI v0.110+</span>
+          </div>
+          <button onclick="switchView('workbench')" class="text-xs text-blue-400 hover:text-white font-mono transition">View app/main.py ➔</button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead>
+              <tr class="border-b border-[#1E2A45] text-[#5A6478] pb-2">
+                <th class="py-2">METHOD</th>
+                <th class="py-2">ROUTE</th>
+                <th class="py-2">DESCRIPTION</th>
+                <th class="py-2">PROTOCOL / STANDARD</th>
+                <th class="py-2 text-right">P99 LATENCY</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#1E2A45]/40 text-[#E9EDF5]">
+              <tr class="hover:bg-[#111A30]/50 transition cursor-pointer" onclick="selectScenario('list')">
+                <td class="py-2.5"><span class="px-2 py-0.5 rounded-full bg-[#3DDC97]/20 text-[#3DDC97] font-bold">GET</span></td>
+                <td class="py-2.5 font-semibold text-white">/customers</td>
+                <td class="py-2.5 text-[#93A0B8]">List customers with search, sort & cursor</td>
+                <td class="py-2.5 text-blue-400">Keyset Cursor (?cursor=...)</td>
+                <td class="py-2.5 text-right text-[#3DDC97]">1.2ms</td>
+              </tr>
+              <tr class="hover:bg-[#111A30]/50 transition cursor-pointer" onclick="selectScenario('analytics')">
+                <td class="py-2.5"><span class="px-2 py-0.5 rounded-full bg-[#3DDC97]/20 text-[#3DDC97] font-bold">GET</span></td>
+                <td class="py-2.5 font-semibold text-white">/customers/analytics/summary</td>
+                <td class="py-2.5 text-[#93A0B8]">Vectorized statistical aggregations & moving averages</td>
+                <td class="py-2.5 text-yellow-400">DuckDB Columnar SQL</td>
+                <td class="py-2.5 text-right text-[#3DDC97]">2.4ms</td>
+              </tr>
+              <tr class="hover:bg-[#111A30]/50 transition cursor-pointer" onclick="selectScenario('get-single')">
+                <td class="py-2.5"><span class="px-2 py-0.5 rounded-full bg-[#3DDC97]/20 text-[#3DDC97] font-bold">GET</span></td>
+                <td class="py-2.5 font-semibold text-white">/customers/{id}</td>
+                <td class="py-2.5 text-[#93A0B8]">Retrieve single record by primary key</td>
+                <td class="py-2.5 text-[#93A0B8]">RFC 7807 404 on missing</td>
+                <td class="py-2.5 text-right text-[#3DDC97]">0.8ms</td>
+              </tr>
+              <tr class="hover:bg-[#111A30]/50 transition cursor-pointer" onclick="selectScenario('problem-422')">
+                <td class="py-2.5"><span class="px-2 py-0.5 rounded-full bg-[#2F6BFF]/20 text-blue-400 font-bold">POST</span></td>
+                <td class="py-2.5 font-semibold text-white">/customers</td>
+                <td class="py-2.5 text-[#93A0B8]">Create record with Idempotency-Key validation</td>
+                <td class="py-2.5 text-purple-400">Idempotency-Key header</td>
+                <td class="py-2.5 text-right text-[#3DDC97]">1.9ms</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
 
   </div>
 
   <!-- ========================================================================= -->
   <!-- 3. BOTTOM PANEL: Integrated Terminal (VS Code Terminal Dock)              -->
   <!-- ========================================================================= -->
-  <div id="terminal-dock" class="h-44 bg-ide-terminal border-t border-ide-border flex flex-col shrink-0">
-    
-    <!-- Terminal Tab Bar -->
-    <div class="h-7 bg-ide-titlebar border-b border-ide-border flex items-center justify-between px-3 text-xs text-ide-slateLight shrink-0">
+  <div id="terminal-dock" class="h-44 bg-[#060A15] border-t border-[#1E2A45] flex flex-col shrink-0 z-30">
+    <div class="h-7 bg-[#0E1528] border-b border-[#1E2A45] flex items-center justify-between px-3 text-xs text-[#93A0B8] shrink-0">
       <div class="flex items-center gap-3 h-full">
         <button class="h-full flex items-center gap-1.5 text-white font-semibold border-b-2 border-[#2F6BFF] px-1">
           <span>TERMINAL</span>
         </button>
-        <button class="h-full flex items-center gap-1.5 text-ide-slate hover:text-white px-1">
+        <button class="h-full flex items-center gap-1.5 text-[#5A6478] hover:text-white px-1">
           <span>OUTPUT</span>
         </button>
-        <button class="h-full flex items-center gap-1.5 text-ide-slate hover:text-white px-1">
+        <button class="h-full flex items-center gap-1.5 text-[#5A6478] hover:text-white px-1">
           <span>PROBLEMS</span>
-          <span class="text-[9px] px-1 rounded-full bg-ide-panel text-ide-slateLight">0</span>
+          <span class="text-[9px] px-1 rounded-full bg-[#0E1528] text-[#93A0B8]">0</span>
         </button>
       </div>
 
       <div class="flex items-center gap-2">
-        <span class="text-[11px] font-mono text-ide-slate">1: bash (datapi-env)</span>
-        <button id="btn-close-terminal" class="p-1 hover:text-white text-ide-slate" title="Hide Terminal Panel">
+        <span class="text-[11px] font-mono text-[#5A6478]">1: bash (datapi-env)</span>
+        <button id="btn-close-terminal" class="p-1 hover:text-white text-[#5A6478]" title="Hide Terminal Panel">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
@@ -708,11 +1153,10 @@
       </div>
     </div>
 
-    <!-- Terminal Screen Content -->
     <div id="terminal-screen" class="flex-1 p-2.5 font-mono text-[11px] text-zinc-300 overflow-y-auto leading-relaxed flex flex-col gap-0.5">
-      <div class="text-ide-slate">datapi Autonomous Development Environment v0.1.0 (WASM Inferrer)</div>
+      <div class="text-[#5A6478]">datapi Autonomous Development Environment v0.1.0 (WASM Inferrer)</div>
       <div class="text-[#3DDC97] flex items-center gap-2">
-        <span class="text-ide-slate">datapi@workspace:~/service$</span>
+        <span class="text-[#5A6478]">datapi@workspace:~/service$</span>
         <span>uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload</span>
       </div>
       <div class="text-zinc-400">INFO:     Will watch for changes in ['/workspace/app']</div>
@@ -720,7 +1164,7 @@
       <div class="text-zinc-400">INFO:     Started reloader process [PID 48210] using WatchFiles</div>
       <div class="text-zinc-400">INFO:     Application startup complete. Live database schema mounted.</div>
       <div id="terminal-log-stream" class="flex flex-col gap-0.5 pt-0.5">
-        <div class="text-ide-slate">INFO:     127.0.0.1:52134 - "GET /customers?limit=5 HTTP/1.1" 200 OK (2ms)</div>
+        <div class="text-[#5A6478]">INFO:     127.0.0.1:52134 - "GET /customers?limit=5 HTTP/1.1" 200 OK (2ms)</div>
       </div>
     </div>
   </div>
@@ -728,8 +1172,7 @@
   <!-- ========================================================================= -->
   <!-- 4. BOTTOM STATUS BAR                                                      -->
   <!-- ========================================================================= -->
-  <footer class="h-6 bg-ide-statusbar border-t border-ide-border text-white text-[11px] font-mono px-3 flex items-center justify-between shrink-0 select-none z-30">
-    <!-- Left items -->
+  <footer class="h-6 bg-[#0E1528] border-t border-[#1E2A45] text-white text-[11px] font-mono px-3 flex items-center justify-between shrink-0 select-none z-30">
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-1 hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer">
         <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -746,7 +1189,6 @@
       </div>
     </div>
 
-    <!-- Right items -->
     <div class="flex items-center gap-3">
       <span class="hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer hidden md:inline">Ln 1, Col 1</span>
       <span class="hover:bg-black/20 px-1 py-0.5 rounded cursor-pointer hidden md:inline">Spaces: 4</span>
@@ -760,94 +1202,53 @@
   <!-- 5. COMMAND PALETTE MODAL (⌘K / Ctrl+K)                                    -->
   <!-- ========================================================================= -->
   <div id="cmd-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-start justify-center pt-20">
-    <div class="w-full max-w-lg bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl flex flex-col overflow-hidden">
-      <!-- Search Input -->
-      <div class="p-3 border-b border-zinc-800 flex items-center gap-2">
-        <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div class="w-full max-w-lg bg-[#0E1528] border border-[#1E2A45] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div class="p-3 border-b border-[#1E2A45] flex items-center gap-2">
+        <svg class="w-4 h-4 text-[#5A6478]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
         <input type="text" id="cmd-input" placeholder="Type a command or search files..." class="w-full bg-transparent text-sm text-zinc-200 focus:outline-none font-sans">
-        <kbd class="text-[10px] font-mono text-zinc-500 px-1.5 py-0.5 bg-zinc-800 rounded">ESC</kbd>
+        <kbd class="text-[10px] font-mono text-[#5A6478] px-1.5 py-0.5 bg-[#060A15] rounded">ESC</kbd>
       </div>
 
-      <!-- Command List -->
       <div class="max-h-72 overflow-y-auto p-1.5 flex flex-col gap-0.5 text-xs font-sans">
-        <button data-cmd="open-main" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+        <button data-cmd="open-main" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded-xl text-zinc-200 hover:bg-[#2F6BFF] hover:text-white transition text-left">
           <span class="flex items-center gap-2 font-medium"><span>🐍</span> Open app/main.py</span>
-          <span class="text-zinc-500 font-mono text-[10px]">File</span>
+          <span class="text-[#5A6478] font-mono text-[10px]">File</span>
         </button>
-        <button data-cmd="open-sdk" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
+        <button data-cmd="open-ts-client" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded-xl text-zinc-200 hover:bg-[#2F6BFF] hover:text-white transition text-left">
           <span class="flex items-center gap-2 font-medium"><span>🔷</span> Open sdk/client.ts</span>
-          <span class="text-zinc-500 font-mono text-[10px]">File</span>
+          <span class="text-[#5A6478] font-mono text-[10px]">File</span>
         </button>
-        <button data-cmd="open-tf" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>☁️</span> Open terraform/main.tf</span>
-          <span class="text-zinc-500 font-mono text-[10px]">File</span>
+        <button data-cmd="switch-workflow" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded-xl text-zinc-200 hover:bg-[#2F6BFF] hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>🕸️</span> Switch to Pipeline Graph</span>
+          <span class="text-[#5A6478] font-mono text-[10px]">View</span>
         </button>
-        <button data-cmd="preset-users" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>👥</span> Load Preset: Customers & Users</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Preset</span>
-        </button>
-        <button data-cmd="preset-inventory" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>📦</span> Load Preset: E-Commerce Inventory</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Preset</span>
-        </button>
-        <button data-cmd="preset-finance" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>💳</span> Load Preset: Financial Transactions</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Preset</span>
-        </button>
-        <button data-cmd="sim-cursor" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>⏩</span> Test: Cursor-Based Pagination</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Phase 1</span>
-        </button>
-        <button data-cmd="sim-problem-422" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>⚠️</span> Test: RFC 7807 Problem Details (422)</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Phase 1</span>
-        </button>
-        <button data-cmd="sim-problem-404" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>🔍</span> Test: RFC 7807 Problem Details (404)</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Phase 1</span>
-        </button>
-        <button data-cmd="sim-analytics" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>🦆</span> Test: Embedded DuckDB Analytics</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Phase 2</span>
-        </button>
-        <button data-cmd="run-sim" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>🚀</span> Execute Live API Request</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Action</span>
-        </button>
-        <button data-cmd="export-zip" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded text-zinc-200 hover:bg-indigo-600 hover:text-white transition text-left">
-          <span class="flex items-center gap-2 font-medium"><span>📦</span> Export Complete Project ZIP</span>
-          <span class="text-zinc-500 font-mono text-[10px]">Export</span>
+        <button data-cmd="switch-observability" class="cmd-item flex items-center justify-between px-2.5 py-2 rounded-xl text-zinc-200 hover:bg-[#2F6BFF] hover:text-white transition text-left">
+          <span class="flex items-center gap-2 font-medium"><span>📊</span> Switch to Observability</span>
+          <span class="text-[#5A6478] font-mono text-[10px]">View</span>
         </button>
       </div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 6. RAW DATA MODAL / DRAWER                                                -->
+  <!-- 6. RAW DATA MODAL                                                         -->
   <!-- ========================================================================= -->
   <div id="data-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="w-full max-w-2xl bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl flex flex-col p-4 gap-3">
-      <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+    <div class="w-full max-w-2xl bg-[#0E1528] border border-[#1E2A45] rounded-2xl shadow-2xl flex flex-col p-4 gap-3">
+      <div class="flex items-center justify-between border-b border-[#1E2A45] pb-2">
         <div class="flex items-center gap-2">
-          <span class="text-indigo-400">📊</span>
-          <h3 class="text-sm font-semibold text-zinc-100">Dataset Ingestion & Schema Definition</h3>
+          <span class="text-[#3DDC97]">📊</span>
+          <h3 class="text-sm font-semibold text-white">Dataset Ingestion & Schema Definition</h3>
         </div>
-        <button id="btn-close-data-modal" class="text-zinc-500 hover:text-zinc-200 text-sm">✕</button>
+        <button id="btn-close-data-modal" class="text-[#5A6478] hover:text-white text-sm">✕</button>
       </div>
-
-      <p class="text-xs text-zinc-400">
-        Paste CSV or JSON records to instantly infer types, generate models, and provision client SDKs.
-      </p>
-
-      <textarea id="modal-raw-input" rows="8" class="w-full bg-zinc-950 border border-zinc-800 rounded p-3 font-mono text-xs text-zinc-200 focus:outline-none"></textarea>
-
+      <p class="text-xs text-[#93A0B8]">Paste CSV or JSON records to instantly infer types, generate models, and provision client SDKs.</p>
+      <textarea id="modal-raw-input" rows="8" class="w-full bg-[#060A15] border border-[#1E2A45] rounded-xl p-3 font-mono text-xs text-zinc-200 focus:outline-none"></textarea>
       <div class="flex items-center justify-between pt-1">
-        <span id="modal-record-count" class="text-xs font-mono text-zinc-500">5 records</span>
-        <button id="btn-apply-data" class="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition">
-          Synthesize Architecture
-        </button>
+        <span id="modal-record-count" class="text-xs font-mono text-[#5A6478]">5 records</span>
+        <button id="btn-apply-data" class="px-4 py-1.5 rounded-full bg-[#2F6BFF] hover:bg-[#2353cf] text-white font-semibold text-xs transition shadow-md">Synthesize Architecture</button>
       </div>
     </div>
   </div>
@@ -856,8 +1257,106 @@
   <!-- 7. APPLICATION LOGIC & WORKBENCH ORCHESTRATION                            -->
   <!-- ========================================================================= -->
   <script>
-    // Presets
-    const PRESETS = {
+    // View Switcher Functionality
+    function switchView(viewName) {
+      const vWorkbench = document.getElementById('view-workbench');
+      const vWorkflow = document.getElementById('view-workflow');
+      const vObservability = document.getElementById('view-observability');
+
+      const btnWorkbench = document.getElementById('nav-mode-workbench');
+      const btnWorkflow = document.getElementById('nav-mode-workflow');
+      const btnObservability = document.getElementById('nav-mode-observability');
+
+      // Hide all
+      vWorkbench.classList.add('hidden');
+      vWorkflow.classList.add('hidden');
+      vObservability.classList.add('hidden');
+
+      // Reset button styles
+      [btnWorkbench, btnWorkflow, btnObservability].forEach(btn => {
+        btn.className = 'px-3 py-1 rounded-full text-xs font-medium text-[#93A0B8] hover:text-white transition flex items-center gap-1.5';
+      });
+
+      if (viewName === 'workflow') {
+        vWorkflow.classList.remove('hidden');
+        btnWorkflow.className = 'px-3 py-1 rounded-full text-xs font-semibold transition flex items-center gap-1.5 pill-active-mint';
+        renderPipelineWires();
+      } else if (viewName === 'observability') {
+        vObservability.classList.remove('hidden');
+        btnObservability.className = 'px-3 py-1 rounded-full text-xs font-semibold transition flex items-center gap-1.5 pill-active-mint';
+      } else {
+        vWorkbench.classList.remove('hidden');
+        btnWorkbench.className = 'px-3 py-1 rounded-full text-xs font-semibold transition flex items-center gap-1.5 pill-active-mint';
+      }
+    }
+
+    // Draw glowing bezier cables connecting the workflow nodes (Ron Design / Image 2 Style)
+    function renderPipelineWires() {
+      const svg = document.getElementById('pipeline-svg-wires');
+      if (!svg) return;
+
+      const nodeRaw = document.getElementById('node-raw');
+      const nodeSchema = document.getElementById('node-schema');
+      const nodeFastapi = document.getElementById('node-fastapi');
+      const nodeDuckdb = document.getElementById('node-duckdb');
+      const nodeSdk = document.getElementById('node-sdk');
+      const nodeDeploy = document.getElementById('node-deploy');
+
+      const nodes = [nodeRaw, nodeSchema, nodeFastapi, nodeDuckdb, nodeSdk, nodeDeploy].filter(Boolean);
+      if (nodes.length < 2) return;
+
+      const canvas = document.getElementById('node-canvas');
+      const canvasRect = canvas.getBoundingClientRect();
+
+      let pathsHtml = `
+        <defs>
+          <linearGradient id="wire-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#2F6BFF" stop-opacity="0.8"/>
+            <stop offset="50%" stop-color="#3DDC97" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#3DDC97" stop-opacity="0.8"/>
+          </linearGradient>
+          <filter id="wire-glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+      `;
+
+      for (let i = 0; i < nodes.length - 1; i++) {
+        const r1 = nodes[i].getBoundingClientRect();
+        const r2 = nodes[i + 1].getBoundingClientRect();
+
+        const x1 = r1.right - canvasRect.left;
+        const y1 = r1.top + r1.height / 2 - canvasRect.top;
+        const x2 = r2.left - canvasRect.left;
+        const y2 = r2.top + r2.height / 2 - canvasRect.top;
+
+        const dx = (x2 - x1) * 0.5;
+        const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+
+        // Background glow curve + animated dash flow curve
+        pathsHtml += `
+          <path d="${d}" fill="none" stroke="#1E2A45" stroke-width="4" stroke-linecap="round"/>
+          <path d="${d}" fill="none" stroke="url(#wire-gradient)" stroke-width="2.5" stroke-linecap="round" filter="url(#wire-glow)" class="flow-wire"/>
+          <circle cx="${x1}" cy="${y1}" r="4" fill="#3DDC97"/>
+          <circle cx="${x2}" cy="${y2}" r="4" fill="#2F6BFF"/>
+        `;
+      }
+
+      svg.innerHTML = pathsHtml;
+    }
+
+    window.addEventListener('resize', () => {
+      const vWorkflow = document.getElementById('view-workflow');
+      if (vWorkflow && !vWorkflow.classList.contains('hidden')) {
+        renderPipelineWires();
+      }
+    });
+
+const PRESETS = {
       customers: `customer_id,full_name,email,plan_tier,account_balance,is_active,created_at
 101,Alice Johnson,alice@corp.com,pro,250.50,true,2024-01-15T09:30:00Z
 102,Bob Smith,bob@acme.org,free,0.00,true,2024-02-01T14:22:10Z
@@ -2224,6 +2723,7 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
     window.addEventListener('DOMContentLoaded', () => {
       updateWorkspace();
     });
-  </script>
+  
+</script>
 </body>
 </html>
