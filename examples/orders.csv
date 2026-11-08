@@ -1,0 +1,13 @@
+order_id,customer_id,order_date,status,total_amount,payment_method,is_expedited
+1001,101,2024-02-10T09:15:00Z,completed,149.99,card,false
+1002,102,2024-02-12T14:30:00Z,pending,49.50,stripe,true
+1003,101,2024-02-15T11:00:00Z,completed,299.00,card,true
+1004,103,2024-02-18T16:20:00Z,refunded,89.95,stripe,false
+1005,104,2024-02-20T10:05:00Z,completed,1250.00,wire,false
+1006,105,2024-02-22T13:45:00Z,pending,35.00,card,false
+1007,102,2024-02-25T15:10:00Z,completed,74.99,stripe,true
+1008,103,2024-02-28T08:50:00Z,completed,450.25,wire,false
+1009,104,2024-03-02T12:30:00Z,completed,820.00,wire,true
+1010,101,2024-03-05T17:15:00Z,refunded,19.99,card,false
+1011,105,2024-03-08T10:40:00Z,pending,120.50,stripe,true
+1012,104,2024-03-12T16:00:00Z,completed,2100.00,wire,false

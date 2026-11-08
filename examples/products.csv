@@ -1,0 +1,11 @@
+product_id,sku,title,category,unit_price,inventory_count,is_active
+201,PROD-ELEC-01,Mechanical Wireless Keyboard,electronics,129.99,75,true
+202,PROD-ELEC-02,Noise-Cancelling Headphones,electronics,249.50,40,true
+203,PROD-ELEC-03,Ultra-Wide Monitor 34-inch,electronics,699.00,18,true
+204,PROD-SOFT-01,Cloud IDE Annual License,software,299.00,1000,true
+205,PROD-SOFT-02,DevOps Security Scanner Suite,software,850.00,500,true
+206,PROD-SOFT-03,Database Backup Agent Pro,software,149.00,250,false
+207,PROD-APP-01,Engineers Heavyweight Hoodie,apparel,79.99,120,true
+208,PROD-APP-02,Performance Tech T-Shirt,apparel,34.50,200,true
+209,PROD-APP-03,Embroidered Developer Cap,apparel,24.99,85,false
+210,PROD-ELEC-04,USB-C Ergonomic Docking Station,electronics,189.95,35,true

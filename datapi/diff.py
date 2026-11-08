@@ -15,6 +15,7 @@ from datapi.infer import FieldDef, SchemaDef, infer_from_file
 class ChangeType(str, Enum):
     FIELD_ADDED = "FIELD_ADDED"
     FIELD_REMOVED = "FIELD_REMOVED"
+    FIELD_RENAMED = "FIELD_RENAMED"
     TYPE_CHANGED = "TYPE_CHANGED"
     NULLABILITY_CHANGED = "NULLABILITY_CHANGED"
     PRIMARY_KEY_CHANGED = "PRIMARY_KEY_CHANGED"
@@ -36,6 +37,17 @@ class FieldChange:
     new_value: Any = None
     migration_advice: str = ""
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "field_name": self.field_name,
+            "change_type": self.change_type.value if hasattr(self.change_type, "value") else str(self.change_type),
+            "severity": self.severity.value if hasattr(self.severity, "value") else str(self.severity),
+            "description": self.description,
+            "old_value": self.old_value,
+            "new_value": self.new_value,
+            "migration_advice": self.migration_advice,
+        }
+
 
 @dataclass
 class SchemaDiff:
@@ -52,8 +64,64 @@ class SchemaDiff:
     def non_breaking_changes(self) -> List[FieldChange]:
         return [c for c in self.changes if c.severity == Severity.NON_BREAKING]
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "old_resource": self.old_resource,
+            "new_resource": self.new_resource,
+            "has_breaking_changes": self.has_breaking_changes,
+            "changes": [c.to_dict() for c in self.changes],
+        }
 
-def diff_schemas(old_schema: SchemaDef, new_schema: SchemaDef) -> SchemaDiff:
+    def to_json(self, indent: int = 2) -> str:
+        import json
+        return json.dumps(self.to_dict(), indent=indent)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SchemaDiff":
+        changes = []
+        for c in data.get("changes", []):
+            ct_val = c.get("change_type", "TYPE_CHANGED")
+            try:
+                change_type = ChangeType(ct_val)
+            except ValueError:
+                change_type = ChangeType[ct_val] if ct_val in ChangeType.__members__ else ChangeType.TYPE_CHANGED
+
+            sev_val = c.get("severity", "NON_BREAKING")
+            try:
+                severity = Severity(sev_val)
+            except ValueError:
+                severity = Severity[sev_val] if sev_val in Severity.__members__ else Severity.NON_BREAKING
+
+            changes.append(
+                FieldChange(
+                    field_name=c.get("field_name", ""),
+                    change_type=change_type,
+                    severity=severity,
+                    description=c.get("description", ""),
+                    old_value=c.get("old_value"),
+                    new_value=c.get("new_value"),
+                    migration_advice=c.get("migration_advice", ""),
+                )
+            )
+        has_breaking = data.get("has_breaking_changes", any(c.severity == Severity.BREAKING for c in changes))
+        return cls(
+            old_resource=data.get("old_resource", ""),
+            new_resource=data.get("new_resource", ""),
+            changes=changes,
+            has_breaking_changes=has_breaking,
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "SchemaDiff":
+        import json
+        return cls.from_dict(json.loads(json_str))
+
+
+def diff_schemas(
+    old_schema: SchemaDef,
+    new_schema: SchemaDef,
+    renames: Optional[Dict[str, str]] = None,
+) -> SchemaDiff:
     """
     Computes semantic differences between two SchemaDef objects.
     Identifies breaking changes that impact API consumers.
@@ -61,6 +129,23 @@ def diff_schemas(old_schema: SchemaDef, new_schema: SchemaDef) -> SchemaDiff:
     changes: List[FieldChange] = []
     old_fields: Dict[str, FieldDef] = {f.name: f for f in old_schema.fields}
     new_fields: Dict[str, FieldDef] = {f.name: f for f in new_schema.fields}
+
+    renamed_old = set(renames.keys()) if renames else set()
+    renamed_new = set(renames.values()) if renames else set()
+
+    if renames:
+        for old_name, new_name in renames.items():
+            changes.append(
+                FieldChange(
+                    field_name=old_name,
+                    change_type=ChangeType.FIELD_RENAMED,
+                    severity=Severity.BREAKING,
+                    description=f"Field '{old_name}' renamed to '{new_name}'",
+                    old_value=old_name,
+                    new_value=new_name,
+                    migration_advice=f"Rename references from '{old_name}' to '{new_name}'.",
+                )
+            )
 
     # 1. Primary Key Changes
     if old_schema.primary_key != new_schema.primary_key:
@@ -78,7 +163,7 @@ def diff_schemas(old_schema: SchemaDef, new_schema: SchemaDef) -> SchemaDiff:
 
     # 2. Removed Fields (BREAKING: consumer expects them in response payload)
     for name, old_f in old_fields.items():
-        if name not in new_fields:
+        if name not in new_fields and name not in renamed_old:
             changes.append(
                 FieldChange(
                     field_name=name,
@@ -93,7 +178,7 @@ def diff_schemas(old_schema: SchemaDef, new_schema: SchemaDef) -> SchemaDiff:
 
     # 3. Added Fields (NON-BREAKING if nullable or has default, POTENTIALLY BREAKING on POST if non-nullable)
     for name, new_f in new_fields.items():
-        if name not in old_fields:
+        if name not in old_fields and name not in renamed_new:
             sev = Severity.BREAKING if not new_f.nullable else Severity.NON_BREAKING
             advice = (
                 f"Field '{name}' is non-nullable. Client POST requests will fail validation (422) unless provided."
@@ -115,6 +200,8 @@ def diff_schemas(old_schema: SchemaDef, new_schema: SchemaDef) -> SchemaDiff:
 
     # 4. Modified Fields (Type or Nullability)
     for name in old_fields.keys() & new_fields.keys():
+        if name in renamed_old or name in renamed_new:
+            continue
         old_f = old_fields[name]
         new_f = new_fields[name]
 
@@ -183,9 +270,12 @@ def diff_schemas(old_schema: SchemaDef, new_schema: SchemaDef) -> SchemaDiff:
 
 
 def diff_files(
-    old_file: Union[str, Path], new_file: Union[str, Path], resource_name: Optional[str] = None
+    old_file: Union[str, Path],
+    new_file: Union[str, Path],
+    resource_name: Optional[str] = None,
+    renames: Optional[Dict[str, str]] = None,
 ) -> SchemaDiff:
     """Diffs two data files directly (CSV, JSON, or SQLite)."""
     old_schema = infer_from_file(old_file, resource_name=resource_name)
     new_schema = infer_from_file(new_file, resource_name=resource_name)
-    return diff_schemas(old_schema, new_schema)
+    return diff_schemas(old_schema, new_schema, renames=renames)

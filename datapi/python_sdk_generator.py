@@ -25,16 +25,97 @@ def _py_type_annotation(f: FieldDef) -> str:
 
 def generate_python_sdk(plan: Union[APIPlan, Any]) -> str:
     """Generates a complete, single-file zero-dependency Python client."""
-    schema = getattr(plan, "schema", plan)
-    title = getattr(plan, "title", f"{schema.resource_name.capitalize()} API")
+    primary_schema = getattr(plan, "schema", plan)
+    schemas = getattr(plan, "all_schemas", [primary_schema])
+    title = getattr(plan, "title", f"{primary_schema.resource_name.capitalize()} API")
     auth_enabled = getattr(plan, "auth_enabled", False)
-    res_title = schema.resource_name.capitalize()
-    resource_name = schema.resource_name
-    plural_name = schema.plural_name
+    res_title = primary_schema.resource_name.capitalize()
+    resource_name = primary_schema.resource_name
+    plural_name = primary_schema.plural_name
 
     auth_doc = ""
     if auth_enabled:
         auth_doc = "\n            api_key: Optional API key for X-API-Key authentication."
+
+    multi_entity_methods = []
+    for s in schemas:
+        s_title = s.resource_name.capitalize()
+        s_res = s.resource_name
+        s_plural = s.plural_name
+
+        multi_entity_methods.append(f'''    def list_{s_plural}(
+        self,
+        limit: Optional[int] = 20,
+        offset: Optional[int] = 0,
+        q: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """List {s_plural} with pagination and filters."""
+        params: Dict[str, Any] = {{"limit": limit, "offset": offset, "q": q}}
+        params.update(kwargs)
+        return self._request("GET", "/{s_plural}", params=params)
+
+    def list_{s_plural}_cursor(
+        self,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = 20,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """List {s_plural} with cursor-based pagination."""
+        limit_val = limit if limit is not None else 20
+        offset = 0
+        if cursor:
+            try:
+                decoded = base64.b64decode(cursor.encode("utf-8")).decode("utf-8")
+                offset = int(decoded)
+            except Exception:
+                try:
+                    offset = int(cursor)
+                except Exception:
+                    offset = 0
+
+        params: Dict[str, Any] = {{"limit": limit_val, "offset": offset}}
+        if cursor:
+            params["cursor"] = cursor
+        params.update(kwargs)
+
+        res = self._request("GET", "/{s_plural}", params=params)
+        if isinstance(res, list):
+            items = res
+            pagination = {{}}
+        else:
+            items = res.get("items", [])
+            pagination = res.get("pagination", {{}})
+
+        total = pagination.get("total")
+        next_offset = offset + len(items)
+        has_more = (next_offset < total) if total is not None else (len(items) == limit_val)
+        next_cursor = base64.b64encode(str(next_offset).encode("utf-8")).decode("utf-8") if has_more else None
+
+        return {{
+            "items": items,
+            "nextCursor": next_cursor,
+            "hasMore": has_more,
+        }}
+
+    def get_{s_res}(self, id: Union[str, int]) -> Dict[str, Any]:
+        """Get a single {s_res} by ID."""
+        return self._request("GET", f"/{s_plural}/{{urllib.parse.quote(str(id))}}")
+
+    def create_{s_res}(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new {s_res}."""
+        return self._request("POST", "/{s_plural}", data=data)
+
+    def update_{s_res}(self, id: Union[str, int], data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing {s_res}."""
+        return self._request("PATCH", f"/{s_plural}/{{urllib.parse.quote(str(id))}}", data=data)
+
+    def delete_{s_res}(self, id: Union[str, int]) -> None:
+        """Delete a {s_res} by ID."""
+        return self._request("DELETE", f"/{s_plural}/{{urllib.parse.quote(str(id))}}")''')
+
+    multi_methods_code = "\n\n".join(multi_entity_methods)
+    aliases_code = "\n".join(f"{s.resource_name.capitalize()}Client = DatapiClient" for s in schemas)
 
     return f'''"""
 {title} - Typed Python Client SDK.
@@ -330,6 +411,10 @@ class DatapiClient:
         """
         return self._request("DELETE", f"/{plural_name}/{{urllib.parse.quote(str(id))}}")
 
+    # Multi-entity methods
+{multi_methods_code}
+
 
 {res_title}Client = DatapiClient
+{aliases_code}
 '''

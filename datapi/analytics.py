@@ -228,71 +228,37 @@ class DuckDBAnalyticsEngine:
         }
 
 
-def generate_duckdb_analytics_code(schema: SchemaDef, app_variable: str = "app") -> str:
+def generate_duckdb_analytics_code(schema: Union[SchemaDef, List[SchemaDef], Any], app_variable: str = "app") -> str:
     """
     Emits turnkey FastAPI route code for:
       - GET /{plural}/analytics/summary
       - GET /{plural}/analytics/timeseries
     Executes vectorized aggregation (COUNT, AVG, MIN, MAX, SUM) grouped by categorical/enum fields.
     Uses DuckDB in-memory engine when installed, with fallback to SQLite window functions.
+    Supports a single SchemaDef, a list of SchemaDef objects, or an APIPlan.
     """
-    plural = schema.plural_name
-    numeric_fields = [f.name for f in _get_numeric_fields(schema)]
-    cat_fields = [f.name for f in _get_categorical_fields(schema)]
-    date_fields = [f.name for f in _get_date_fields(schema)]
-    default_date_field = date_fields[0] if date_fields else (schema.primary_key or "id")
-    default_metric_field = numeric_fields[0] if numeric_fields else ""
+    if hasattr(schema, "all_schemas"):
+        schemas = schema.all_schemas
+    elif isinstance(schema, list):
+        schemas = schema
+    else:
+        schemas = [schema]
 
-    code = f'''# --- Turnkey DuckDB Vectorized Analytics Endpoints for {plural} ---
+    endpoints_code = []
 
-try:
-    import duckdb as _duckdb
-    _DUCKDB_AVAILABLE = True
-except ImportError:
-    _duckdb = None
-    _DUCKDB_AVAILABLE = False
+    for s in schemas:
+        plural = s.plural_name
+        numeric_fields = [f.name for f in _get_numeric_fields(s)]
+        cat_fields = [f.name for f in _get_categorical_fields(s)]
+        date_fields = [f.name for f in _get_date_fields(s)]
+        default_date_field = date_fields[0] if date_fields else (s.primary_key or "id")
+        default_metric_field = numeric_fields[0] if numeric_fields else ""
 
-import sqlite3 as _sqlite3
-from typing import Any, Dict, List, Optional, Tuple
-from fastapi import Query, HTTPException, status
+        numeric_cols_repr = repr(numeric_fields)
+        cat_fields_repr = repr(cat_fields)
+        all_fields_repr = repr([f.name for f in s.fields])
 
-
-def _execute_analytics_query(
-    sql_duckdb: str,
-    sql_sqlite: str,
-    records: List[Dict[str, Any]],
-) -> Tuple[List[Dict[str, Any]], str]:
-    if not records:
-        return [], "none"
-
-    if _DUCKDB_AVAILABLE:
-        try:
-            con = _duckdb.connect(":memory:")
-            rows = records
-            con.execute("CREATE TABLE records AS SELECT * FROM rows")
-            res = con.execute(sql_duckdb).fetchall()
-            cols = [d[0] for d in con.description]
-            return [dict(zip(cols, row)) for row in res], "duckdb"
-        except Exception:
-            pass
-
-    conn = _sqlite3.connect(":memory:")
-    conn.row_factory = _sqlite3.Row
-    cur = conn.cursor()
-    keys = list(records[0].keys())
-    cols = ", ".join(f\'"{{k}}"\' for k in keys)
-    placeholders = ", ".join("?" for _ in keys)
-    cur.execute(f"CREATE TABLE records ({{cols}})")
-    cur.executemany(
-        f"INSERT INTO records VALUES ({{placeholders}})",
-        [[r.get(k) for k in keys] for r in records],
-    )
-    cur.execute(sql_sqlite)
-    results = [dict(r) for r in cur.fetchall()]
-    conn.close()
-    return results, "sqlite"
-
-
+        endpoint_block = f'''
 @{app_variable}.get(
     "/{plural}/analytics/summary",
     tags=["Analytics"],
@@ -301,19 +267,20 @@ def _execute_analytics_query(
 def get_{plural}_analytics_summary(
     group_by: Optional[str] = Query(None, description="Categorical or enum field to group by"),
 ):
-    rows = list(db.values()) if "db" in globals() else []
+    target_db = globals().get("db_{plural}", globals().get("db", {{}}))
+    rows = list(target_db.values())
     if not rows:
         return {{"resource": "{plural}", "total": 0, "metrics": [], "engine": "none"}}
 
-    valid_group_fields = {repr(cat_fields)}
-    all_fields = {repr([f.name for f in schema.fields])}
+    valid_group_fields = {cat_fields_repr}
+    all_fields = {all_fields_repr}
     if group_by and group_by not in valid_group_fields and group_by not in all_fields:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid group_by field: {{group_by}}. Allowed fields: {{valid_group_fields}}",
         )
 
-    numeric_cols = {repr(numeric_fields)}
+    numeric_cols = {numeric_cols_repr}
     aggs = ["COUNT(*) AS total_count"]
     for num_col in numeric_cols:
         aggs.append(f\'AVG("{{num_col}}") AS avg_{{num_col}}\')
@@ -351,7 +318,8 @@ def get_{plural}_analytics_timeseries(
     interval: str = Query("day", description="Time bucket interval (day, month, year)"),
     metric: Optional[str] = Query(None, description="Numeric metric column to aggregate"),
 ):
-    rows = list(db.values()) if "db" in globals() else []
+    target_db = globals().get("db_{plural}", globals().get("db", {{}}))
+    rows = list(target_db.values())
     if not rows:
         return {{"resource": "{plural}", "total": 0, "timeseries": [], "engine": "none"}}
 
@@ -417,7 +385,58 @@ ORDER BY period ASC"""
         "engine": engine,
     }}
 '''
-    return code.strip()
+        endpoints_code.append(endpoint_block)
+
+    header = f'''# --- Turnkey DuckDB Vectorized Analytics Endpoints ---
+
+try:
+    import duckdb as _duckdb
+    _DUCKDB_AVAILABLE = True
+except ImportError:
+    _duckdb = None
+    _DUCKDB_AVAILABLE = False
+
+import sqlite3 as _sqlite3
+from typing import Any, Dict, List, Optional, Tuple
+from fastapi import Query, HTTPException, status
+
+
+def _execute_analytics_query(
+    sql_duckdb: str,
+    sql_sqlite: str,
+    records: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], str]:
+    if not records:
+        return [], "none"
+
+    if _DUCKDB_AVAILABLE:
+        try:
+            con = _duckdb.connect(":memory:")
+            rows = records
+            con.execute("CREATE TABLE records AS SELECT * FROM rows")
+            res = con.execute(sql_duckdb).fetchall()
+            cols = [d[0] for d in con.description]
+            return [dict(zip(cols, row)) for row in res], "duckdb"
+        except Exception:
+            pass
+
+    conn = _sqlite3.connect(":memory:")
+    conn.row_factory = _sqlite3.Row
+    cur = conn.cursor()
+    keys = list(records[0].keys())
+    cols = ", ".join(f\'"{{k}}"\' for k in keys)
+    placeholders = ", ".join("?" for _ in keys)
+    cur.execute(f"CREATE TABLE records ({{cols}})")
+    cur.executemany(
+        f"INSERT INTO records VALUES ({{placeholders}})",
+        [[r.get(k) for k in keys] for r in records],
+    )
+    cur.execute(sql_sqlite)
+    results = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return results, "sqlite"
+'''
+    return (header + "\n".join(endpoints_code)).strip()
 
 
 # Aliases for convenience

@@ -4,7 +4,7 @@ Translates user natural language instructions into concrete API endpoint specifi
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Union
 from datapi.infer import SchemaDef
 
 
@@ -24,21 +24,47 @@ class APIPlan:
     auth_enabled: bool = False
     mock_count: int = 0
     rate_limiting_enabled: bool = False
+    additional_schemas: List[SchemaDef] = field(default_factory=list)
+
+    @property
+    def all_schemas(self) -> List[SchemaDef]:
+        res = [self.schema]
+        for s in self.additional_schemas:
+            if s.resource_name != self.schema.resource_name and s not in res:
+                res.append(s)
+        return res
+
+    @property
+    def schemas(self) -> List[SchemaDef]:
+        return self.all_schemas
 
 
 def create_api_plan(
-    schema: SchemaDef,
+    schema: Union[SchemaDef, List[SchemaDef]],
     intent: Optional[str] = None,
     auth_enabled: Optional[bool] = None,
     mock_count: int = 0,
+    additional_schemas: Optional[List[SchemaDef]] = None,
 ) -> APIPlan:
+    if isinstance(schema, list):
+        if not schema:
+            raise ValueError("Schema list cannot be empty")
+        primary_schema = schema[0]
+        extra_schemas = list(schema[1:])
+        if additional_schemas:
+            extra_schemas.extend(additional_schemas)
+    else:
+        primary_schema = schema
+        extra_schemas = list(additional_schemas or [])
+
     plan = APIPlan(
-        title=f"{schema.resource_name.capitalize()} API",
+        title=f"{primary_schema.resource_name.capitalize()} API",
         version="v1.0.0",
-        description=f"Auto-generated high-performance RESTful API for {schema.plural_name}.",
-        schema=schema,
-        filter_fields=[f.name for f in schema.fields if f.is_filter_candidate and not f.is_primary_key],
+        description=f"Auto-generated high-performance RESTful API for {primary_schema.plural_name}.",
+        schema=primary_schema,
+        filter_fields=[f.name for f in primary_schema.fields if f.is_filter_candidate and not f.is_primary_key],
         mock_count=mock_count,
+        additional_schemas=extra_schemas,
     )
 
     if auth_enabled is not None:
@@ -66,7 +92,7 @@ def create_api_plan(
         plan.auth_enabled = True
 
     # Check for specific filter intents
-    for f in schema.fields:
+    for f in primary_schema.fields:
         if f.name in lower_intent:
             if f.name not in plan.filter_fields and not f.is_primary_key:
                 plan.filter_fields.append(f.name)

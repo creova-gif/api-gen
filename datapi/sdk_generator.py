@@ -30,28 +30,59 @@ def _ts_type_annotation(f: FieldDef) -> str:
 
 def generate_typescript_sdk(plan: Union[APIPlan, Any]) -> str:
     """Generates a complete, single-file zero-dependency TypeScript client."""
-    schema = getattr(plan, "schema", plan)
-    title = getattr(plan, "title", f"{schema.resource_name.capitalize()} API")
+    primary_schema = getattr(plan, "schema", plan)
+    schemas = getattr(plan, "all_schemas", [primary_schema])
+    title = getattr(plan, "title", f"{primary_schema.resource_name.capitalize()} API")
     auth_enabled = getattr(plan, "auth_enabled", False)
-    res_title = schema.resource_name.capitalize()
-    pk = getattr(schema, "primary_key", "id") or "id"
+    res_title = primary_schema.resource_name.capitalize()
+    pk = getattr(primary_schema, "primary_key", "id") or "id"
 
-    # TypeScript Interfaces
-    fields_ts = []
-    create_fields_ts = []
-    update_fields_ts = []
+    # TypeScript Interfaces for all schemas
+    interfaces_code = []
+    for s in schemas:
+        s_title = s.resource_name.capitalize()
+        s_pk = getattr(s, "primary_key", "id") or "id"
+        fields_ts = []
+        create_fields_ts = []
+        update_fields_ts = []
 
-    for f in schema.fields:
-        ts_type = _ts_type_annotation(f)
-        fields_ts.append(f"  {f.name}: {ts_type};")
-        if f.name != pk:
-            optional_marker = "?" if f.nullable else ""
-            create_fields_ts.append(f"  {f.name}{optional_marker}: {ts_type};")
-            update_fields_ts.append(f"  {f.name}?: {ts_type};")
+        for f in s.fields:
+            ts_type = _ts_type_annotation(f)
+            fields_ts.append(f"  {f.name}: {ts_type};")
+            if f.name != s_pk:
+                optional_marker = "?" if f.nullable else ""
+                create_fields_ts.append(f"  {f.name}{optional_marker}: {ts_type};")
+                update_fields_ts.append(f"  {f.name}?: {ts_type};")
 
-    fields_str = "\n".join(fields_ts)
-    create_fields_str = "\n".join(create_fields_ts) or "  [key: string]: unknown;"
-    update_fields_str = "\n".join(update_fields_ts) or "  [key: string]: unknown;"
+        f_str = "\n".join(fields_ts)
+        c_str = "\n".join(create_fields_ts) or "  [key: string]: unknown;"
+        u_str = "\n".join(update_fields_ts) or "  [key: string]: unknown;"
+
+        interfaces_code.append(f"""export interface {s_title} {{
+{f_str}
+}}
+
+export interface {s_title}CreateInput {{
+{c_str}
+}}
+
+export interface {s_title}UpdateInput {{
+{u_str}
+}}
+
+export interface {s_title}ListResponse {{
+  items: {s_title}[];
+  pagination: PaginationMetadata;
+}}
+
+export interface {s_title}ListParams {{
+  limit?: number;
+  offset?: number;
+  q?: string;
+  [key: string]: unknown;
+}}""")
+
+    all_interfaces_str = "\n\n".join(interfaces_code)
 
     auth_header_logic = ""
     auth_param = ""
@@ -62,23 +93,128 @@ def generate_typescript_sdk(plan: Union[APIPlan, Any]) -> str:
     }
 """
 
+    # Multi-entity methods
+    multi_methods = []
+    multi_accessors = []
+    for s in schemas:
+        s_title = s.resource_name.capitalize()
+        s_plural = s.plural_name
+        s_plural_title = s_plural.capitalize()
+
+        multi_methods.append(f"""  /** List {s_plural} with pagination and filters */
+  async list{s_plural_title}(params: {s_title}ListParams = {{}}): Promise<{s_title}ListResponse> {{
+    const query = new URLSearchParams();
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.offset !== undefined) query.set("offset", String(params.offset));
+    if (params.q !== undefined) query.set("q", params.q);
+
+    for (const [k, v] of Object.entries(params)) {{
+      if (!["limit", "offset", "q"].includes(k) && v !== undefined) {{
+        query.set(k, String(v));
+      }}
+    }}
+
+    const qs = query.toString();
+    return this.request(`/{s_plural}${{qs ? `?${{qs}}` : ""}}`);
+  }}
+
+  /** Cursor-based pagination for {s_plural} */
+  async list{s_plural_title}Cursor(params?: {{ cursor?: string; limit?: number }}): Promise<{{
+    items: {s_title}[];
+    nextCursor?: string;
+    hasMore: boolean;
+  }}> {{
+    const p = (params || {{}}) as Record<string, any>;
+    const limit = p.limit ?? 20;
+    let offset = 0;
+    if (p.cursor) {{
+      try {{
+        const decoded = typeof atob === "function" ? atob(p.cursor) : Buffer.from(p.cursor, "base64").toString("utf-8");
+        const parsed = parseInt(decoded, 10);
+        offset = isNaN(parsed) ? (parseInt(p.cursor, 10) || 0) : parsed;
+      }} catch {{
+        offset = parseInt(p.cursor, 10) || 0;
+      }}
+    }}
+
+    const query = new URLSearchParams();
+    query.set("limit", String(limit));
+    query.set("offset", String(offset));
+    if (p.cursor) {{
+      query.set("cursor", p.cursor);
+    }}
+
+    for (const [k, v] of Object.entries(p)) {{
+      if (!["cursor", "limit", "offset"].includes(k) && v !== undefined) {{
+        query.set(k, String(v));
+      }}
+    }}
+
+    const qs = query.toString();
+    const res = await this.request<any>(`/{s_plural}${{qs ? `?${{qs}}` : ""}}`);
+    const items: {s_title}[] = Array.isArray(res) ? res : (res.items || []);
+    const total = res.pagination?.total;
+    const nextOffset = offset + items.length;
+    const hasMore = res.hasMore !== undefined
+      ? Boolean(res.hasMore)
+      : (total !== undefined ? nextOffset < total : items.length === limit);
+    const nextCursor = res.nextCursor || (hasMore ? (typeof btoa === "function" ? btoa(String(nextOffset)) : String(nextOffset)) : undefined);
+
+    return {{
+      items,
+      nextCursor,
+      hasMore,
+    }};
+  }}
+
+  /** Get a single {s.resource_name} by ID */
+  async get{s_title}(id: string | number): Promise<{s_title}> {{
+    return this.request(`/{s_plural}/${{encodeURIComponent(id)}}`);
+  }}
+
+  /** Create a new {s.resource_name} */
+  async create{s_title}(payload: {s_title}CreateInput): Promise<{s_title}> {{
+    return this.request(`/{s_plural}`, {{
+      method: "POST",
+      body: JSON.stringify(payload),
+    }});
+  }}
+
+  /** Update an existing {s.resource_name} */
+  async update{s_title}(id: string | number, payload: {s_title}UpdateInput): Promise<{s_title}> {{
+    return this.request(`/{s_plural}/${{encodeURIComponent(id)}}`, {{
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }});
+  }}
+
+  /** Delete a {s.resource_name} by ID */
+  async delete{s_title}(id: string | number): Promise<void> {{
+    return this.request(`/{s_plural}/${{encodeURIComponent(id)}}`, {{
+      method: "DELETE",
+    }});
+  }}""")
+
+        multi_accessors.append(f"""  get {s_plural}() {{
+    return {{
+      list: (params?: {s_title}ListParams) => this.list{s_plural_title}(params),
+      listCursor: (params?: {{ cursor?: string; limit?: number }}) => this.list{s_plural_title}Cursor(params),
+      get: (id: string | number) => this.get{s_title}(id),
+      create: (payload: {s_title}CreateInput) => this.create{s_title}(payload),
+      update: (id: string | number, payload: {s_title}UpdateInput) => this.update{s_title}(id, payload),
+      delete: (id: string | number) => this.delete{s_title}(id),
+    }};
+  }}""")
+
+    multi_methods_str = "\n\n".join(multi_methods)
+    multi_accessors_str = "\n\n".join(multi_accessors)
+    client_aliases = "\n".join(f"export const {s.resource_name.capitalize()}Client = {res_title}Client;" for s in schemas)
+
     return f"""/**
  * {title} - Typed Client SDK.
  * Auto-generated by Datapi Engine.
  * Zero external dependencies (uses native fetch and AbortSignal).
  */
-
-export interface {res_title} {{
-{fields_str}
-}}
-
-export interface {res_title}CreateInput {{
-{create_fields_str}
-}}
-
-export interface {res_title}UpdateInput {{
-{update_fields_str}
-}}
 
 export interface PaginationMetadata {{
   total: number;
@@ -86,23 +222,13 @@ export interface PaginationMetadata {{
   offset: number;
 }}
 
-export interface {res_title}ListResponse {{
-  items: {res_title}[];
-  pagination: PaginationMetadata;
-}}
-
-export interface {res_title}ListParams {{
-  limit?: number;
-  offset?: number;
-  q?: string;
-  [key: string]: unknown;
-}}
-
 export interface CursorPage<T> {{
   items: T[];
   nextCursor?: string;
   hasMore: boolean;
 }}
+
+{all_interfaces_str}
 
 /**
  * RFC 7807 standardized Problem Details error response.
@@ -266,100 +392,42 @@ export class {res_title}Client {{
     return this.request("/healthz");
   }}
 
-  /** List {schema.plural_name} with pagination and filters */
+  /** Primary entity convenience methods */
   async list(params: {res_title}ListParams = {{}}): Promise<{res_title}ListResponse> {{
-    const query = new URLSearchParams();
-    if (params.limit !== undefined) query.set("limit", String(params.limit));
-    if (params.offset !== undefined) query.set("offset", String(params.offset));
-    if (params.q !== undefined) query.set("q", params.q);
-
-    for (const [k, v] of Object.entries(params)) {{
-      if (!["limit", "offset", "q"].includes(k) && v !== undefined) {{
-        query.set(k, String(v));
-      }}
-    }}
-
-    const qs = query.toString();
-    return this.request(`/{schema.plural_name}${{qs ? `?${{qs}}` : ""}}`);
+    return this.list{primary_schema.plural_name.capitalize()}(params);
   }}
 
-  /** Cursor-based pagination returning items, nextCursor, and hasMore */
   async listCursor(params?: {{ cursor?: string; limit?: number }}): Promise<{{
     items: {res_title}[];
     nextCursor?: string;
     hasMore: boolean;
   }}> {{
-    const p = (params || {{}}) as Record<string, any>;
-    const limit = p.limit ?? 20;
-    let offset = 0;
-    if (p.cursor) {{
-      try {{
-        const decoded = typeof atob === "function" ? atob(p.cursor) : Buffer.from(p.cursor, "base64").toString("utf-8");
-        const parsed = parseInt(decoded, 10);
-        offset = isNaN(parsed) ? (parseInt(p.cursor, 10) || 0) : parsed;
-      }} catch {{
-        offset = parseInt(p.cursor, 10) || 0;
-      }}
-    }}
-
-    const query = new URLSearchParams();
-    query.set("limit", String(limit));
-    query.set("offset", String(offset));
-    if (p.cursor) {{
-      query.set("cursor", p.cursor);
-    }}
-
-    for (const [k, v] of Object.entries(p)) {{
-      if (!["cursor", "limit", "offset"].includes(k) && v !== undefined) {{
-        query.set(k, String(v));
-      }}
-    }}
-
-    const qs = query.toString();
-    const res = await this.request<any>(`/{schema.plural_name}${{qs ? `?${{qs}}` : ""}}`);
-    const items: {res_title}[] = Array.isArray(res) ? res : (res.items || []);
-    const total = res.pagination?.total;
-    const nextOffset = offset + items.length;
-    const hasMore = res.hasMore !== undefined
-      ? Boolean(res.hasMore)
-      : (total !== undefined ? nextOffset < total : items.length === limit);
-    const nextCursor = res.nextCursor || (hasMore ? (typeof btoa === "function" ? btoa(String(nextOffset)) : String(nextOffset)) : undefined);
-
-    return {{
-      items,
-      nextCursor,
-      hasMore,
-    }};
+    return this.list{primary_schema.plural_name.capitalize()}Cursor(params);
   }}
 
-  /** Get a single {schema.resource_name} by ID */
   async get(id: string | number): Promise<{res_title}> {{
-    return this.request(`/{schema.plural_name}/${{encodeURIComponent(id)}}`);
+    return this.get{res_title}(id);
   }}
 
-  /** Create a new {schema.resource_name} */
   async create(payload: {res_title}CreateInput): Promise<{res_title}> {{
-    return this.request(`/{schema.plural_name}`, {{
-      method: "POST",
-      body: JSON.stringify(payload),
-    }});
+    return this.create{res_title}(payload);
   }}
 
-  /** Update an existing {schema.resource_name} */
   async update(id: string | number, payload: {res_title}UpdateInput): Promise<{res_title}> {{
-    return this.request(`/{schema.plural_name}/${{encodeURIComponent(id)}}`, {{
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    }});
+    return this.update{res_title}(id, payload);
   }}
 
-  /** Delete a {schema.resource_name} by ID */
   async delete(id: string | number): Promise<void> {{
-    return this.request(`/{schema.plural_name}/${{encodeURIComponent(id)}}`, {{
-      method: "DELETE",
-    }});
+    return this.delete{res_title}(id);
   }}
+
+  // Multi-entity operations
+{multi_methods_str}
+
+  // Multi-entity resource accessors
+{multi_accessors_str}
 }}
 
 export const DatapiClient = {res_title}Client;
+{client_aliases}
 """

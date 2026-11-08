@@ -98,11 +98,8 @@ def _generate_synthetic_record(schema: SchemaDef, idx: int) -> Dict[str, Any]:
     return row
 
 
-def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
-    schema = plan.schema
+def _build_resource_components(schema: SchemaDef) -> Dict[str, Any]:
     res_title = schema.resource_name.capitalize()
-    res_path = f"/{schema.plural_name}"
-
     properties: Dict[str, Any] = {}
     required_fields: List[str] = []
 
@@ -121,91 +118,49 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
         if not f.nullable and not f.is_primary_key:
             required_fields.append(f.name)
 
-    components: Dict[str, Any] = {
-        "schemas": {
-            f"{res_title}Base": {
-                "type": "object",
-                "properties": properties,
-                "required": required_fields,
-            },
-            f"{res_title}Create": {
-                "type": "object",
-                "properties": {k: v for k, v in properties.items() if k != schema.primary_key},
-                "required": [r for r in required_fields if r != schema.primary_key],
-            },
-            f"{res_title}Update": {
-                "type": "object",
-                "properties": {k: v for k, v in properties.items() if k != schema.primary_key},
-            },
-            f"{res_title}Response": {
-                "type": "object",
-                "properties": properties,
-                "required": list(properties.keys()),
-            },
-            "PaginationMetadata": {
-                "type": "object",
-                "properties": {
-                    "total": {"type": "integer"},
-                    "limit": {"type": "integer"},
-                    "offset": {"type": "integer"},
-                    "next_cursor": {"type": "string"},
-                    "has_more": {"type": "boolean"},
-                },
-            },
-            f"{res_title}ListResponse": {
-                "type": "object",
-                "properties": {
-                    "items": {
-                        "type": "array",
-                        "items": {"$ref": f"#/components/schemas/{res_title}Response"},
-                    },
-                    "total": {"type": "integer"},
-                    "next_cursor": {"type": "string"},
-                    "has_more": {"type": "boolean"},
-                    "pagination": {"$ref": "#/components/schemas/PaginationMetadata"},
-                },
-                "required": ["items", "total", "has_more"],
-            },
-            "ProblemDetails": {
-                "type": "object",
-                "properties": {
-                    "type": {"type": "string"},
-                    "title": {"type": "string"},
-                    "status": {"type": "integer"},
-                    "detail": {},
-                    "instance": {"type": "string"},
-                },
-                "required": ["type", "title", "status", "detail", "instance"],
-            },
-        }
-    }
-
-    if plan.auth_enabled:
-        components["securitySchemes"] = {
-            "ApiKeyAuth": {
-                "type": "apiKey",
-                "in": "header",
-                "name": "X-API-Key",
-                "description": "Standard API Key Authentication",
-            }
-        }
-
-    spec: Dict[str, Any] = {
-        "openapi": "3.1.0",
-        "info": {
-            "title": plan.title,
-            "version": plan.version,
-            "description": plan.description,
+    return {
+        f"{res_title}Base": {
+            "type": "object",
+            "properties": properties,
+            "required": required_fields,
         },
-        "servers": [{"url": "/", "description": "Local & Cloud Run base path"}],
-        "paths": {},
-        "components": components,
+        f"{res_title}Create": {
+            "type": "object",
+            "properties": {k: v for k, v in properties.items() if k != schema.primary_key},
+            "required": [r for r in required_fields if r != schema.primary_key],
+        },
+        f"{res_title}Update": {
+            "type": "object",
+            "properties": {k: v for k, v in properties.items() if k != schema.primary_key},
+        },
+        f"{res_title}Response": {
+            "type": "object",
+            "properties": properties,
+            "required": list(properties.keys()),
+        },
+        f"{res_title}ListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {"$ref": f"#/components/schemas/{res_title}Response"},
+                },
+                "total": {"type": "integer"},
+                "next_cursor": {"type": "string"},
+                "has_more": {"type": "boolean"},
+                "pagination": {"$ref": "#/components/schemas/PaginationMetadata"},
+            },
+            "required": ["items", "total", "has_more"],
+        },
     }
 
-    if plan.auth_enabled:
-        spec["security"] = [{"ApiKeyAuth": []}]
 
-    # Endpoint: GET /resources
+def _build_resource_paths(schema: SchemaDef, plan: APIPlan) -> Dict[str, Any]:
+    res_title = schema.resource_name.capitalize()
+    res_path = f"/{schema.plural_name}"
+    pk = schema.primary_key or "id"
+    item_path = f"{res_path}/{{{pk}}}"
+
     list_op: Dict[str, Any] = {
         "summary": f"List {schema.plural_name}",
         "tags": [res_title],
@@ -269,11 +224,10 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
             }
         )
 
-    spec["paths"][res_path] = {"get": list_op}
+    paths: Dict[str, Any] = {res_path: {"get": list_op}}
 
-    # Endpoint: POST /resources
     if plan.allow_create:
-        spec["paths"][res_path]["post"] = {
+        paths[res_path]["post"] = {
             "summary": f"Create a new {schema.resource_name}",
             "tags": [res_title],
             "parameters": [
@@ -305,10 +259,7 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
             },
         }
 
-    # Endpoint: GET /resources/{id}
-    pk = schema.primary_key or "id"
-    item_path = f"{res_path}/{{{pk}}}"
-    spec["paths"][item_path] = {
+    paths[item_path] = {
         "get": {
             "summary": f"Get {schema.resource_name} by ID",
             "tags": [res_title],
@@ -334,9 +285,8 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
         }
     }
 
-    # Endpoint: PATCH /resources/{id}
     if plan.allow_update:
-        spec["paths"][item_path]["patch"] = {
+        paths[item_path]["patch"] = {
             "summary": f"Update {schema.resource_name}",
             "tags": [res_title],
             "parameters": [
@@ -368,9 +318,8 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
             },
         }
 
-    # Endpoint: DELETE /resources/{id}
     if plan.allow_delete:
-        spec["paths"][item_path]["delete"] = {
+        paths[item_path]["delete"] = {
             "summary": f"Delete {schema.resource_name}",
             "tags": [res_title],
             "parameters": [
@@ -386,6 +335,69 @@ def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
                 "404": {"description": "Resource not found"},
             },
         }
+
+    return paths
+
+
+def generate_openapi_spec(plan: APIPlan) -> Dict[str, Any]:
+    schemas = getattr(plan, "all_schemas", [plan.schema])
+
+    components: Dict[str, Any] = {
+        "schemas": {
+            "PaginationMetadata": {
+                "type": "object",
+                "properties": {
+                    "total": {"type": "integer"},
+                    "limit": {"type": "integer"},
+                    "offset": {"type": "integer"},
+                    "next_cursor": {"type": "string"},
+                    "has_more": {"type": "boolean"},
+                },
+            },
+            "ProblemDetails": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string"},
+                    "title": {"type": "string"},
+                    "status": {"type": "integer"},
+                    "detail": {},
+                    "instance": {"type": "string"},
+                },
+                "required": ["type", "title", "status", "detail", "instance"],
+            },
+        }
+    }
+
+    for s in schemas:
+        components["schemas"].update(_build_resource_components(s))
+
+    if plan.auth_enabled:
+        components["securitySchemes"] = {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-API-Key",
+                "description": "Standard API Key Authentication",
+            }
+        }
+
+    spec: Dict[str, Any] = {
+        "openapi": "3.1.0",
+        "info": {
+            "title": plan.title,
+            "version": plan.version,
+            "description": plan.description,
+        },
+        "servers": [{"url": "/", "description": "Local & Cloud Run base path"}],
+        "paths": {},
+        "components": components,
+    }
+
+    if plan.auth_enabled:
+        spec["security"] = [{"ApiKeyAuth": []}]
+
+    for s in schemas:
+        spec["paths"].update(_build_resource_paths(s, plan))
 
     return spec
 
@@ -608,6 +620,7 @@ for row in INITIAL_RECORDS:
     item_id = str(row.get("{pk}") or uuid.uuid4())
     row["{pk}"] = item_id
     db[item_id] = row
+db_{schema.plural_name} = db
 
 # --- Idempotency Cache ---
 IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {{}}
@@ -806,6 +819,248 @@ def delete_{schema.resource_name}({pk}: str):
     del db[{pk}]
     return None
 '''
+
+    extra_schemas = [s for s in getattr(plan, "all_schemas", [plan.schema]) if s.resource_name != schema.resource_name]
+    for s in extra_schemas:
+        s_title = s.resource_name.capitalize()
+        s_res = s.resource_name
+        s_pk = s.primary_key or "id"
+        s_plural = s.plural_name
+
+        s_create_fields_code = []
+        s_response_fields_code = []
+        s_update_fields_code = []
+
+        for f in s.fields:
+            if f.name != s_pk:
+                s_create_fields_code.append(f"    {f.name}: {_py_type_annotation(f)}")
+                s_update_fields_code.append(f"    {f.name}: {_py_type_annotation_optional(f)}")
+            s_response_fields_code.append(f"    {f.name}: {_py_type_annotation(f)}")
+
+        s_create_fields_str = "\n".join(s_create_fields_code) or "    pass"
+        s_response_fields_str = "\n".join(s_response_fields_code)
+        s_update_fields_str = "\n".join(s_update_fields_code) or "    pass"
+
+        s_records = list(s.sample_records)
+        s_seed_json = pprint.pformat(json.loads(json.dumps(s_records, default=str)), indent=4, sort_dicts=False)
+
+        s_pk_field = next((f for f in s.fields if f.name == s_pk), None)
+        if s_pk_field and s_pk_field.python_type == "int":
+            s_id_gen = f"""    int_keys = [int(k) for k in db_{s_plural}.keys() if str(k).isdigit()]
+    new_id = (max(int_keys) + 1) if int_keys else 1"""
+        else:
+            s_id_gen = """    new_id = str(uuid.uuid4())"""
+
+        code += f'''
+
+# --- Data Models for {s_title} ---
+
+class {s_title}Create(BaseModel):
+{s_create_fields_str}
+
+
+class {s_title}Update(BaseModel):
+{s_update_fields_str}
+
+
+class {s_title}Response(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+{s_response_fields_str}
+
+
+class {s_title}ListResponse(BaseModel):
+    items: List[{s_title}Response]
+    total: int
+    next_cursor: Optional[str] = None
+    has_more: bool = False
+    pagination: Optional[PaginationMetadata] = None
+
+
+# --- In-Memory Database for {s_plural} ---
+INITIAL_RECORDS_{s_plural.upper()}: List[Dict[str, Any]] = {s_seed_json}
+
+db_{s_plural}: Dict[str, Dict[str, Any]] = {{}}
+for row in INITIAL_RECORDS_{s_plural.upper()}:
+    item_id = str(row.get("{s_pk}") or uuid.uuid4())
+    row["{s_pk}"] = item_id
+    db_{s_plural}[item_id] = row
+
+
+# --- Resource Endpoints for {s_plural} ---
+
+@app.get(
+    "/{s_plural}",
+    response_model={s_title}ListResponse,
+    summary="List {s_plural}",
+    tags=["{s_title}"]{endpoint_security},
+)
+def list_{s_plural}(
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Page offset"),
+    cursor: Optional[str] = Query(None, description="Cursor for keyset pagination"),
+    sort: Optional[str] = Query(None, description="Sort field (prefix with '-' for descending)"),
+    q: Optional[str] = Query(None, description="Search query across text fields"),
+):
+    results = list(db_{s_plural}.values())
+    if q:
+        query = q.lower()
+        results = [
+            item for item in results
+            if any(query in str(v).lower() for v in item.values() if v is not None)
+        ]
+
+    if sort:
+        reverse = sort.startswith("-")
+        sort_key = sort[1:] if reverse else sort
+        def _sort_val(x):
+            v = x.get(sort_key)
+            if v is None:
+                return (1, "")
+            try:
+                return (0, v)
+            except Exception:
+                return (0, str(v))
+        try:
+            results = sorted(results, key=_sort_val, reverse=reverse)
+        except TypeError:
+            results = sorted(results, key=lambda x: str(x.get(sort_key, "")), reverse=reverse)
+
+    total = len(results)
+    last_id = None
+    if cursor:
+        try:
+            cursor_data = json.loads(base64.b64decode(cursor.encode("utf-8")).decode("utf-8"))
+            last_id = cursor_data.get("id")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid cursor token")
+
+    def _is_greater(item_val, cursor_val):
+        try:
+            return int(item_val) > int(cursor_val)
+        except (ValueError, TypeError):
+            return str(item_val) > str(cursor_val)
+
+    if last_id is not None:
+        results = [x for x in results if _is_greater(x.get("{s_pk}", x.get("id")), last_id)]
+
+    if cursor is not None:
+        paged_items = results[:limit]
+        has_more = len(results) > limit
+    else:
+        paged_items = results[offset : offset + limit]
+        has_more = (offset + limit) < total
+
+    next_cursor = None
+    if has_more and paged_items:
+        last_item_id = paged_items[-1].get("{s_pk}")
+        if last_item_id is None:
+            last_item_id = paged_items[-1].get("id")
+        next_cursor = base64.b64encode(json.dumps({{"id": last_item_id}}).encode("utf-8")).decode("utf-8")
+
+    return {{
+        "items": paged_items,
+        "total": total,
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+        "pagination": {{
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "next_cursor": next_cursor,
+            "has_more": has_more,
+        }},
+    }}
+
+
+@app.get(
+    "/{s_plural}/{{{s_pk}}}",
+    response_model={s_title}Response,
+    summary="Get {s_res} by ID",
+    tags=["{s_title}"]{endpoint_security},
+)
+def get_{s_res}({s_pk}: str):
+    if {s_pk} not in db_{s_plural}:
+        raise HTTPException(status_code=404, detail="{s_title} not found")
+    return db_{s_plural}[{s_pk}]
+'''
+
+        if plan.allow_create:
+            code += f'''
+@app.post(
+    "/{s_plural}",
+    response_model={s_title}Response,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new {s_res}",
+    tags=["{s_title}"]{endpoint_security},
+)
+def create_{s_res}(
+    payload: {s_title}Create,
+    response: Response,
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
+):
+    now = time.time()
+    if idempotency_key:
+        cached = IDEMPOTENCY_CACHE.get(idempotency_key)
+        if cached:
+            created_at = cached.get("timestamp", 0)
+            if now - created_at < IDEMPOTENCY_TTL_SECONDS:
+                return JSONResponse(
+                    content=cached["data"],
+                    status_code=status.HTTP_201_CREATED,
+                    headers={{"X-Cache-Lookup": "HIT"}},
+                )
+            else:
+                IDEMPOTENCY_CACHE.pop(idempotency_key, None)
+
+{s_id_gen}
+    record = payload.model_dump()
+    record["{s_pk}"] = new_id
+    db_{s_plural}[str(new_id)] = record
+    if idempotency_key:
+        response.headers["X-Cache-Lookup"] = "MISS"
+        IDEMPOTENCY_CACHE[idempotency_key] = {{
+            "timestamp": now,
+            "data": jsonable_encoder(record),
+        }}
+    return record
+'''
+
+        if plan.allow_update:
+            code += f'''
+@app.patch(
+    "/{s_plural}/{{{s_pk}}}",
+    response_model={s_title}Response,
+    summary="Update {s_res}",
+    tags=["{s_title}"]{endpoint_security},
+)
+def update_{s_res}({s_pk}: str, payload: {s_title}Update):
+    if {s_pk} not in db_{s_plural}:
+        raise HTTPException(status_code=404, detail="{s_title} not found")
+
+    existing = db_{s_plural}[{s_pk}]
+    updates = payload.model_dump(exclude_unset=True)
+    existing.update(updates)
+    db_{s_plural}[{s_pk}] = existing
+    return existing
+'''
+
+        if plan.allow_delete:
+            code += f'''
+@app.delete(
+    "/{s_plural}/{{{s_pk}}}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete {s_res}",
+    tags=["{s_title}"]{endpoint_security},
+)
+def delete_{s_res}({s_pk}: str):
+    if {s_pk} not in db_{s_plural}:
+        raise HTTPException(status_code=404, detail="{s_title} not found")
+    del db_{s_plural}[{s_pk}]
+    return None
+'''
+
+    from datapi.analytics import generate_duckdb_analytics_code
+    code += "\n\n" + generate_duckdb_analytics_code(getattr(plan, "all_schemas", [plan.schema]))
 
     return code
 

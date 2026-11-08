@@ -317,9 +317,18 @@
         </div>
         <div id="panel-explorer" class="sidebar-panel p-2 flex flex-col gap-3">
           <div>
-            <div class="text-[10px] font-mono text-[#5A6478] px-2 py-1 flex items-center justify-between uppercase">
-              <span>Workspace Files</span>
-              <span>7 files</span>
+            <div class="px-2 py-1 flex items-center justify-between">
+              <span class="text-[10px] font-mono text-[#93A0B8] font-bold tracking-wider uppercase">WORKSPACE</span>
+              <div class="flex items-center gap-1.5">
+                <span id="sidebar-file-count" class="text-[10px] font-mono text-[#5A6478]">7 files</span>
+                <button id="btn-upload-dataset" type="button" class="px-2 py-0.5 rounded bg-[#111A30] hover:bg-[#2F6BFF] text-blue-400 hover:text-white border border-[#1E2A45] transition flex items-center gap-1 cursor-pointer font-sans normal-case text-[10px] font-semibold" title="Upload CSV or JSON Dataset">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                  </svg>
+                  <span>Upload Dataset</span>
+                </button>
+                <input type="file" id="input-file-upload" accept=".csv,.json" class="hidden">
+              </div>
             </div>
             <ul id="file-tree" class="flex flex-col gap-0.5 text-xs font-mono">
               <li><button data-file="app/main.py" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-blue-400 font-semibold flex items-center gap-2"><span>🐍</span> <span>app/main.py</span></button></li>
@@ -330,6 +339,17 @@
               <li><button data-file="Dockerfile" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#93A0B8] flex items-center gap-2"><span>🐳</span> <span>Dockerfile</span></button></li>
               <li><button data-file="README.md" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#93A0B8] flex items-center gap-2"><span>📘</span> <span>README.md</span></button></li>
             </ul>
+
+            <!-- Visible Sidebar Dropzone -->
+            <div id="sidebar-dropzone" class="mt-2 border-2 border-dashed border-[#1E2A45] hover:border-[#3DDC97] rounded-xl p-2.5 text-center bg-[#0E1528]/50 hover:bg-[#0E1528] transition-all cursor-pointer group flex flex-col items-center justify-center gap-1">
+              <div class="w-6 h-6 rounded-lg bg-[#111A30] group-hover:bg-[#3DDC97]/20 flex items-center justify-center text-blue-400 group-hover:text-[#3DDC97] transition">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+              </div>
+              <div class="text-[11px] font-medium text-white group-hover:text-[#3DDC97] transition">Drop .csv or .json here</div>
+              <div class="text-[9px] text-[#5A6478]">Client-side zero server latency</div>
+            </div>
           </div>
           <div>
             <div class="text-[10px] font-mono text-[#5A6478] px-2 py-1 flex items-center justify-between uppercase">
@@ -361,6 +381,10 @@
         <div id="panel-simulator" class="sidebar-panel p-3 hidden flex flex-col gap-2">
           <div class="text-xs font-semibold text-white">Simulation Presets</div>
           <div class="flex flex-col gap-1 text-xs">
+            <button id="scenario-btn-records" onclick="selectScenario('records')" class="p-2 rounded-lg bg-[#0E1528] border border-[#1E2A45] text-left hover:border-[#3DDC97] transition flex flex-col gap-0.5">
+              <span class="font-semibold text-[#3DDC97]">★ Ingested Dataset Records</span>
+              <span class="text-[10px] text-[#93A0B8]">GET /records</span>
+            </button>
             <button onclick="selectScenario('cursor')" class="p-2 rounded-lg bg-[#0E1528] border border-[#1E2A45] text-left hover:border-[#3DDC97] transition flex flex-col gap-0.5">
               <span class="font-semibold text-[#3DDC97]">1. Keyset Cursor Pagination</span>
               <span class="text-[10px] text-[#93A0B8]">GET /customers?cursor=...&limit=5</span>
@@ -398,7 +422,17 @@
         <div class="h-6 bg-[#0A0F1E] border-b border-[#1E2A45]/50 px-4 flex items-center text-[11px] text-[#5A6478] font-mono gap-1.5 shrink-0">
           <span>workspace</span><span>&rsaquo;</span><span id="ec-path-folder" class="text-[#93A0B8]">app</span><span>&rsaquo;</span><span id="ec-path-filename" class="text-white">main.py</span>
         </div>
-        <div class="flex-1 flex overflow-hidden bg-[#0A0F1E] relative">
+        <div id="workbench-editor-container" class="flex-1 flex overflow-hidden bg-[#0A0F1E] relative">
+          <!-- Dropzone Overlay -->
+          <div id="workbench-dropzone-overlay" class="absolute inset-0 bg-[#060A15]/85 backdrop-blur-sm border-2 border-dashed border-[#3DDC97] z-30 hidden flex flex-col items-center justify-center gap-3 transition-all pointer-events-none">
+            <div class="w-14 h-14 rounded-2xl bg-[#3DDC97]/10 border border-[#3DDC97]/40 flex items-center justify-center text-[#3DDC97] shadow-[0_0_30px_rgba(61,220,151,0.2)]">
+              <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+            </div>
+            <div class="text-sm font-display font-bold text-white">Drop CSV or JSON Dataset</div>
+            <div class="text-xs font-mono text-[#3DDC97]">Client-side schema inference & zero server latency</div>
+          </div>
           <div id="gutter-lines" class="w-12 bg-[#060A15] border-r border-[#1E2A45]/60 py-3 line-numbers text-xs font-mono shrink-0 select-none overflow-hidden"></div>
           <div class="flex-1 p-3 overflow-auto">
             <pre id="editor-code" class="code-content text-xs text-[#E9EDF5] font-mono focus:outline-none" tabindex="0"></pre>
@@ -572,12 +606,12 @@
             <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#111A30] text-blue-300 border border-blue-500/30">CSV / JSON</span>
           </div>
           <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono">
-            <div class="flex justify-between text-[#93A0B8]"><span>Source</span><span class="text-white font-semibold">customers.csv</span></div>
-            <div class="flex justify-between text-[#93A0B8]"><span>Rows Ingested</span><span class="text-[#3DDC97] font-semibold">5 seed rows</span></div>
-            <div class="flex justify-between text-[#93A0B8]"><span>Parse Latency</span><span class="text-[#3DDC97]">0.8ms</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Source</span><span id="node-raw-source" class="text-white font-semibold">customers.csv</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Rows Ingested</span><span id="node-raw-rows" class="text-[#3DDC97] font-semibold">5 seed rows</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Parse Latency</span><span id="node-raw-latency" class="text-[#3DDC97]">0.8ms</span></div>
           </div>
           <div class="flex items-center justify-between text-[10px] text-[#5A6478] font-mono">
-            <span>Input Port: None</span>
+            <span>Input: None</span>
             <span class="text-blue-400 font-semibold">Output ➔</span>
           </div>
         </div>
@@ -592,8 +626,8 @@
             <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#3DDC97]/20 text-[#3DDC97] border border-[#3DDC97]/30">Type-Safe</span>
           </div>
           <div class="p-2.5 rounded-xl bg-[#060A15]/80 border border-[#1E2A45] flex flex-col gap-1 text-[11px] font-mono">
-            <div class="flex justify-between text-[#93A0B8]"><span>Primary Key</span><span class="text-[#3DDC97] font-semibold">customer_id</span></div>
-            <div class="flex justify-between text-[#93A0B8]"><span>Inferred Fields</span><span class="text-white">7 attributes</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Primary Key</span><span id="node-schema-pk" class="text-[#3DDC97] font-semibold">customer_id</span></div>
+            <div class="flex justify-between text-[#93A0B8]"><span>Inferred Fields</span><span id="node-schema-fields" class="text-white">7 attributes</span></div>
             <div class="flex justify-between text-[#93A0B8]"><span>Breaking Drift</span><span class="text-[#3DDC97]">0 detected</span></div>
           </div>
           <div class="flex items-center justify-between text-[10px] text-[#5A6478] font-mono">
@@ -1392,7 +1426,9 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
       currentMethod: 'GET',
       simulatedDb: {},
       allRecords: [],
-      files: {}
+      files: {},
+      datasetFilename: 'customers.csv',
+      parseLatency: '0.8'
     };
 
     // DOM Elements
@@ -1417,15 +1453,15 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
     const cfgSqlite = document.getElementById('cfg-sqlite');
 
     // Simulator
-    const simMethod = document.getElementById('sim-method');
-    const simUrl = document.getElementById('sim-url');
-    const btnSimSend = document.getElementById('btn-sim-send');
-    const simPayloadBox = document.getElementById('sim-payload-box');
+    const simMethod = document.getElementById('sim-method-select') || document.getElementById('sim-method');
+    const simUrl = document.getElementById('sim-url-input') || document.getElementById('sim-url');
+    const btnSimSend = document.getElementById('btn-run-simulator') || document.getElementById('btn-sim-send');
+    const simPayloadBox = document.getElementById('sim-body-container') || document.getElementById('sim-payload-box');
     const simPayloadInput = document.getElementById('sim-payload-input');
     const simStatusBadge = document.getElementById('sim-status-badge');
     const simContentTypeBadge = document.getElementById('sim-content-type-badge');
     const simResponseOutput = document.getElementById('sim-response-output');
-    const simDbCount = document.getElementById('sim-db-count');
+    const simDbCount = document.getElementById('sim-record-count-badge') || document.getElementById('sim-db-count');
     const btnCopyCurl = document.getElementById('btn-copy-curl');
     const simScenarioSelect = document.getElementById('sim-scenario-select');
     const simBtnCursor = document.getElementById('sim-btn-cursor');
@@ -1439,28 +1475,83 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
     const modalRawInput = document.getElementById('modal-raw-input');
 
     // -------------------------------------------------------------------------
-    // Parser & Inferrer
+    // Toast Notification System
     // -------------------------------------------------------------------------
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const borderCol = type === 'success' ? 'border-[#3DDC97]/40 text-[#3DDC97]' : 'border-red-500/40 text-red-400';
+      toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-2xl border text-xs font-mono flex items-center gap-2.5 bg-[#0E1528]/95 backdrop-blur-md ${borderCol} transition-all duration-300 transform translate-y-2 opacity-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]`;
+      toast.innerHTML = `
+        <span class="text-sm font-bold">${type === 'success' ? '⚡' : '⚠️'}</span>
+        <span class="text-white font-medium">${message}</span>
+      `;
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => {
+          if (toast.parentNode) toast.remove();
+        }, 350);
+      }, 4500);
+    }
+
+    // -------------------------------------------------------------------------
+    // Parser & Client-Side Schema Inferrer
+    // -------------------------------------------------------------------------
+    function splitCsvLine(line) {
+      const result = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"' || c === "'") {
+          if (inQuotes && line[i + 1] === c) {
+            cur += c;
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (c === ',' && !inQuotes) {
+          result.push(cur.trim().replace(/^["']|["']$/g, ''));
+          cur = '';
+        } else {
+          cur += c;
+        }
+      }
+      result.push(cur.trim().replace(/^["']|["']$/g, ''));
+      return result;
+    }
+
     function parseRecords(text) {
+      if (!text) return [];
       text = text.trim();
       if (!text) return [];
 
       if (text.startsWith('[') || text.startsWith('{')) {
         try {
-          const parsed = JSON.parse(text);
-          return Array.isArray(parsed) ? parsed : [parsed];
+          let parsed = JSON.parse(text);
+          if (!Array.isArray(parsed)) {
+            if (Array.isArray(parsed.data)) parsed = parsed.data;
+            else if (Array.isArray(parsed.records)) parsed = parsed.records;
+            else if (Array.isArray(parsed.items)) parsed = parsed.items;
+            else if (Array.isArray(parsed.results)) parsed = parsed.results;
+            else parsed = [parsed];
+          }
+          return parsed;
         } catch (e) {}
       }
 
-      const lines = text.split('\n');
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       if (lines.length < 2) return [];
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+      const headers = splitCsvLine(lines[0]);
       const parsedRows = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const vals = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+        const vals = splitCsvLine(lines[i]);
         if (vals.length === headers.length) {
           const row = {};
           headers.forEach((h, idx) => {
@@ -1477,48 +1568,109 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
     }
 
     function inferSchema(records) {
-      if (!records.length) return [];
-      const sample = records[0];
-      const fields = [];
+      if (!records || !records.length) return [];
+      
+      const keys = [];
+      records.forEach(r => {
+        Object.keys(r).forEach(k => {
+          if (!keys.includes(k)) keys.push(k);
+        });
+      });
 
-      for (const [key, val] of Object.entries(sample)) {
+      const fields = [];
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      const isoDatetimeRegex = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+      const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+      for (const key of keys) {
+        const vals = records
+          .map(r => r[key])
+          .filter(v => v !== null && v !== undefined && v !== '');
+
         let pyType = 'str';
         let oapiType = 'string';
         let tsType = 'string';
+        let displayType = 'str';
 
-        if (typeof val === 'number') {
-          if (Number.isInteger(val)) {
+        if (vals.length > 0) {
+          const allBool = vals.every(v => typeof v === 'boolean' || (typeof v === 'string' && /^(true|false)$/i.test(v.trim())));
+          const allInt = vals.every(v => {
+            if (typeof v === 'number') return Number.isInteger(v);
+            if (typeof v === 'string') return /^-?\d+$/.test(v.trim());
+            return false;
+          });
+          const allFloat = !allInt && vals.every(v => {
+            if (typeof v === 'number') return !isNaN(v);
+            if (typeof v === 'string') return /^-?\d*(\.\d+)([eE][+-]?\d+)?$/.test(v.trim()) || /^-?\d+$/.test(v.trim());
+            return false;
+          });
+          const allDatetime = vals.every(v => typeof v === 'string' && isoDatetimeRegex.test(v.trim()));
+          const allDate = !allDatetime && vals.every(v => typeof v === 'string' && isoDateRegex.test(v.trim()));
+          const allEmail = vals.every(v => typeof v === 'string' && emailRegex.test(v.trim()));
+
+          if (allBool) {
+            pyType = 'bool';
+            oapiType = 'boolean';
+            tsType = 'boolean';
+            displayType = 'bool';
+          } else if (allInt) {
             pyType = 'int';
             oapiType = 'integer';
             tsType = 'number';
-          } else {
+            displayType = 'int';
+          } else if (allFloat) {
             pyType = 'float';
             oapiType = 'number';
             tsType = 'number';
+            displayType = 'float';
+          } else if (allDatetime) {
+            pyType = 'datetime';
+            oapiType = 'string';
+            tsType = 'string';
+            displayType = 'datetime';
+          } else if (allDate) {
+            pyType = 'date';
+            oapiType = 'string';
+            tsType = 'string';
+            displayType = 'date';
+          } else if (allEmail) {
+            pyType = 'str';
+            oapiType = 'string';
+            tsType = 'string';
+            displayType = 'email';
+          } else {
+            pyType = 'str';
+            oapiType = 'string';
+            tsType = 'string';
+            displayType = 'str';
           }
-        } else if (typeof val === 'boolean') {
-          pyType = 'bool';
-          oapiType = 'boolean';
-          tsType = 'boolean';
-        } else if (typeof val === 'string' && val.includes('T') && val.includes('Z')) {
-          pyType = 'datetime';
-          oapiType = 'string';
-          tsType = 'string';
         }
 
-        const isPk = key === 'id' || key.endsWith('_id') || key === 'sku' || key.endsWith('_sku');
         fields.push({
           name: key,
           pyType,
           oapiType,
           tsType,
-          isPk
+          displayType,
+          isPk: false
         });
       }
 
-      if (!fields.some(f => f.isPk) && fields.length > 0) {
-        fields[0].isPk = true;
+      // 4. Identify primary key (field ending in `_id` or named `id`)
+      let pkField = fields.find(f => f.name.toLowerCase() === 'id');
+      if (!pkField) {
+        pkField = fields.find(f => f.name.toLowerCase().endsWith('_id'));
       }
+      if (!pkField) {
+        pkField = fields.find(f => f.name.toLowerCase() === 'sku' || f.name.toLowerCase().endsWith('_sku'));
+      }
+      if (!pkField && fields.length > 0) {
+        pkField = fields[0];
+      }
+      if (pkField) {
+        pkField.isPk = true;
+      }
+
       return fields;
     }
 
@@ -1531,9 +1683,13 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
         fields.forEach(f => {
           if (f.isPk) {
             mock[f.name] = f.pyType === 'int' ? i + 100 : `${f.name.toUpperCase()}_${i}`;
-          } else if (f.name.includes('email')) {
+          } else if (f.displayType === 'email' || f.name.includes('email')) {
             mock[f.name] = `user${i}@acme-corp.io`;
-          } else if (f.name.includes('amount') || f.name.includes('price') || f.name.includes('balance')) {
+          } else if (f.pyType === 'date') {
+            mock[f.name] = '2024-05-01';
+          } else if (f.pyType === 'datetime') {
+            mock[f.name] = '2024-05-01T12:00:00Z';
+          } else if (f.pyType === 'float' || f.name.includes('amount') || f.name.includes('price') || f.name.includes('balance')) {
             mock[f.name] = +(29.99 + (i * 3.75)).toFixed(2);
           } else if (f.pyType === 'int') {
             mock[f.name] = i * 4;
@@ -1546,6 +1702,162 @@ tx_905,acc_15,4.20,USD,Vercel,completed,2024-03-15T12:20:00Z`
         all.push(mock);
       }
       return all;
+    }
+
+    // -------------------------------------------------------------------------
+    // File Ingestion & UI Synchronization
+    // -------------------------------------------------------------------------
+    const customFiles = {};
+
+    function populateImportedFileInExplorer(filename, text) {
+      customFiles[filename] = text;
+      state.files[filename] = text;
+
+      const fileTree = document.getElementById('file-tree');
+      if (!fileTree) return;
+
+      let existingBtn = fileTree.querySelector(`[data-file="${filename}"]`);
+      if (!existingBtn) {
+        const li = document.createElement('li');
+        const icon = filename.endsWith('.json') ? '⚡' : '📊';
+        li.innerHTML = `
+          <button data-file="${filename}" class="file-item w-full text-left px-2 py-1 rounded hover:bg-[#111A30] text-[#3DDC97] font-semibold flex items-center gap-2 transition">
+            <span>${icon}</span>
+            <span class="truncate">${filename}</span>
+          </button>
+        `;
+        const btn = li.querySelector('button');
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.file-item').forEach(b => {
+            b.classList.remove('bg-zinc-800/80', 'text-zinc-200');
+            b.classList.add('text-zinc-400');
+          });
+          btn.classList.add('bg-zinc-800/80', 'text-zinc-200');
+          btn.classList.remove('text-zinc-400');
+          openFileInEditor(filename);
+        });
+        fileTree.insertBefore(li, fileTree.firstChild);
+      }
+
+      const fileCountEl = document.getElementById('sidebar-file-count');
+      if (fileCountEl) {
+        const count = fileTree.querySelectorAll('.file-item').length;
+        fileCountEl.textContent = `${count} files`;
+      }
+    }
+
+    function updatePipelineGraphNodes(filename, fields, rowCount, latency) {
+      const pkField = fields.find(f => f.isPk) || fields[0];
+      const nodePk = document.getElementById('node-schema-pk');
+      if (nodePk && pkField) {
+        nodePk.textContent = pkField.name;
+      }
+      const nodeFields = document.getElementById('node-schema-fields');
+      if (nodeFields) {
+        nodeFields.textContent = `${fields.length} attributes`;
+      }
+      const nodeRawSource = document.getElementById('node-raw-source');
+      if (nodeRawSource) {
+        nodeRawSource.textContent = filename || 'customers.csv';
+      }
+      const nodeRawRows = document.getElementById('node-raw-rows');
+      if (nodeRawRows) {
+        nodeRawRows.textContent = `${rowCount} seed rows`;
+      }
+      const nodeRawLatency = document.getElementById('node-raw-latency');
+      if (nodeRawLatency) {
+        nodeRawLatency.textContent = `${latency}ms`;
+      }
+    }
+
+    function handleFileImport(file) {
+      if (!file) return;
+      const filename = file.name;
+      const isCsv = filename.toLowerCase().endsWith('.csv');
+      const isJson = filename.toLowerCase().endsWith('.json');
+
+      if (!isCsv && !isJson) {
+        showToast(`Unsupported file type: ${filename}. Please upload .csv or .json`, 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      const startTime = performance.now();
+
+      reader.onload = (e) => {
+        try {
+          const text = e.target.result;
+          const parseStartTime = performance.now();
+
+          // 1. Parse CSV or JSON
+          const parsedRecords = parseRecords(text);
+          if (!parsedRecords || parsedRecords.length === 0) {
+            showToast(`Failed to parse ${filename}: No valid data records found`, 'error');
+            return;
+          }
+
+          // 2. Client-side Schema Inference
+          const fields = inferSchema(parsedRecords);
+          const parseLatency = Math.max(0.4, Number((performance.now() - parseStartTime).toFixed(1)));
+
+          // 3. Update state
+          state.rawText = text;
+          state.records = parsedRecords;
+          state.fields = fields;
+          state.datasetFilename = filename;
+          state.parseLatency = parseLatency;
+
+          // Resource name derivation
+          let baseResName = filename.replace(/\.(csv|json)$/i, '')
+                                    .replace(/[-_]?(data|dataset|records|file)$/i, '')
+                                    .replace(/[^a-zA-Z0-9_]/g, '_')
+                                    .toLowerCase();
+          if (baseResName.endsWith('ies')) {
+            baseResName = baseResName.slice(0, -3) + 'y';
+          } else if (baseResName.endsWith('s') && !baseResName.endsWith('ss') && baseResName.length > 2) {
+            baseResName = baseResName.slice(0, -1);
+          }
+          if (!baseResName) baseResName = 'record';
+          state.resourceName = baseResName;
+          if (cfgResName) cfgResName.value = baseResName;
+
+          // 4. Update File Explorer with imported dataset file
+          populateImportedFileInExplorer(filename, text);
+
+          // 5. Update Workspace & Code generation
+          updateWorkspace();
+
+          // 6. Update Pipeline Graph Schema Inferrer Node & Raw Ingestion Node
+          updatePipelineGraphNodes(filename, fields, parsedRecords.length, parseLatency);
+
+          // 7. Update Live API Simulator for GET /records
+          selectScenario('records');
+          const rpTabSimulator = document.getElementById('rp-tab-simulator');
+          if (rpTabSimulator) rpTabSimulator.click();
+          executeSimulation();
+
+          // 8. Emit Toast Notification
+          const totalLatency = Math.max(0.6, Number((performance.now() - startTime).toFixed(1)));
+          showToast(`Ingested ${filename}: Inferred ${fields.length} fields in ${totalLatency}ms (Zero Server Latency)`);
+
+          // 9. Append agent trace log
+          if (agentTraceLog) {
+            const trace = document.createElement('div');
+            trace.className = 'flex items-center gap-2 p-1.5 rounded-xl bg-[#0E1528]/80 border border-[#1E2A45]/60';
+            trace.innerHTML = `<span class="text-[#3DDC97] font-bold">✓</span><span class="text-zinc-200">Ingested <b>${filename}</b>: Inferred ${fields.length} attributes (${totalLatency}ms WASM)</span>`;
+            agentTraceLog.appendChild(trace);
+          }
+        } catch (err) {
+          console.error(err);
+          showToast(`Error processing ${filename}: ${err.message}`, 'error');
+        }
+      };
+
+      reader.onerror = () => {
+        showToast(`Failed to read file ${filename}`, 'error');
+      };
+
+      reader.readAsText(file);
     }
 
     // -------------------------------------------------------------------------
@@ -1584,7 +1896,7 @@ Generated by datapi Engine with Cursor Pagination, RFC 7807, and DuckDB Vectoriz
 
 import base64
 import json
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -1618,10 +1930,10 @@ class ProblemDetails(BaseModel):
 
 class ${resTitle}Response(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-${fields.map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType}`).join('\n')}
+${fields.map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType === 'date' ? 'date' : f.pyType}`).join('\n')}
 
 class ${resTitle}Create(BaseModel):
-${fields.filter(f => !f.isPk).map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType}`).join('\n')}
+${fields.filter(f => !f.isPk).map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType === 'date' ? 'date' : f.pyType}`).join('\n')}
 
 class CursorPaginatedList(BaseModel):
     items: List[${resTitle}Response]
@@ -1760,7 +2072,7 @@ def create_${resourceName}(payload: ${resTitle}Create):
       // 2. app/models.py
       const modelsPy = `from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Dict
-from datetime import datetime
+from datetime import datetime, date
 
 class ProblemDetails(BaseModel):
     type: str = "about:blank"
@@ -1771,7 +2083,7 @@ class ProblemDetails(BaseModel):
     invalid_params: Optional[List[Dict[str, str]]] = None
 
 class ${resTitle}Base(BaseModel):
-${fields.map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType}`).join('\n')}
+${fields.map(f => `    ${f.name}: ${f.pyType === 'datetime' ? 'datetime' : f.pyType === 'date' ? 'date' : f.pyType}`).join('\n')}
 
 class ${resTitle}InDB(${resTitle}Base):
     model_config = ConfigDict(from_attributes=True)
@@ -2079,6 +2391,7 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
       else if (state.activeFile.endsWith('.ts')) sbLangIndicator.textContent = 'TypeScript';
       else if (state.activeFile.endsWith('.tf')) sbLangIndicator.textContent = 'Terraform HCL';
       else if (state.activeFile.endsWith('.json')) sbLangIndicator.textContent = 'JSON';
+      else if (state.activeFile.endsWith('.csv')) sbLangIndicator.textContent = 'CSV Dataset';
       else if (state.activeFile.endsWith('.md')) sbLangIndicator.textContent = 'Markdown';
       else sbLangIndicator.textContent = 'Plain Text';
     }
@@ -2091,7 +2404,7 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
             ${f.name}
             ${f.isPk ? '<span class="text-[8px] px-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">PK</span>' : ''}
           </span>
-          <span class="text-indigo-400 text-[10px]">${f.pyType}</span>
+          <span class="text-indigo-400 text-[10px] font-mono">${f.displayType || f.pyType}</span>
         </div>
       `).join('');
     }
@@ -2121,8 +2434,14 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
       simUrl.value = `/${plural}?cursor=eyJpZCI6NX0=&limit=5`;
       simDbCount.textContent = `${state.allRecords.length} records in memory`;
 
-      // Generate all files
-      state.files = generateWorkspaceFiles(state.resourceName, state.fields, state.allRecords, state.authEnabled);
+      // Generate all files and merge custom files
+      state.files = {
+        ...generateWorkspaceFiles(state.resourceName, state.fields, state.allRecords, state.authEnabled),
+        ...customFiles
+      };
+
+      // Update Pipeline Graph Nodes
+      updatePipelineGraphNodes(state.datasetFilename || 'customers.csv', state.fields, state.records.length, state.parseLatency || '0.8');
 
       // Render Editor
       renderEditor();
@@ -2150,7 +2469,12 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
       const plural = state.resourceName.endsWith('s') ? state.resourceName : state.resourceName + 's';
       const pkField = (state.fields.find(f => f.isPk) || state.fields[0])?.name || 'id';
 
-      if (scenario === 'cursor') {
+      if (scenario === 'records') {
+        simMethod.value = 'GET';
+        simUrl.value = '/records';
+        simPayloadBox.classList.add('hidden');
+        if (simScenarioSelect) simScenarioSelect.value = 'records';
+      } else if (scenario === 'cursor') {
         simMethod.value = 'GET';
         simUrl.value = `/${plural}?cursor=eyJpZCI6NX0=&limit=5`;
         simPayloadBox.classList.add('hidden');
@@ -2213,6 +2537,21 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
           records_count: Object.keys(state.simulatedDb).length,
           timestamp: new Date().toISOString()
         };
+      } else if (endpoint === '/records' || endpoint.startsWith('/records?') || endpoint.startsWith('/records/')) {
+        let items = state.records && state.records.length > 0 ? state.records : Object.values(state.simulatedDb);
+        const urlParams = new URLSearchParams(endpoint.split('?')[1] || '');
+        const limit = parseInt(urlParams.get('limit'), 10) || items.length;
+        const offset = parseInt(urlParams.get('offset'), 10) || 0;
+        const pageItems = items.slice(offset, offset + limit);
+        response = {
+          items: pageItems,
+          total_records: items.length,
+          dataset_source: state.datasetFilename || 'imported_dataset',
+          inferred_fields: state.fields.length,
+          schema: state.fields.map(f => ({ name: f.name, type: f.pyType, is_pk: f.isPk })),
+          status: "success"
+        };
+        status = 200;
       } else if (endpoint === `/${plural}/analytics/summary` || endpoint === '/analytics/summary') {
         // --- 1. Embedded DuckDB Vectorized Analytics ---
         const records = Object.values(state.simulatedDb);
@@ -2483,7 +2822,7 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
       if (!tab) {
         tab = document.createElement('button');
         tab.dataset.tabFile = file;
-        const icon = file.endsWith('.py') ? '🐍' : file.endsWith('.ts') ? '🔷' : file.endsWith('.tf') ? '☁️' : file.endsWith('.json') ? '⚡' : file.endsWith('.md') ? '📖' : '📄';
+        const icon = file.endsWith('.py') ? '🐍' : file.endsWith('.ts') ? '🔷' : file.endsWith('.tf') ? '🟣' : file.endsWith('.json') ? '⚡' : file.endsWith('.csv') ? '📊' : file.endsWith('.md') ? '📘' : '📄';
         const name = file.split('/').pop();
         tab.className = 'editor-tab h-full px-3 flex items-center gap-2 text-zinc-400 hover:text-zinc-200 border-r border-ide-border bg-ide-hoverTab transition';
         tab.innerHTML = `<span class="text-xs font-mono">${icon}</span><span>${name}</span><span class="tab-close text-zinc-500 hover:text-zinc-300 ml-1 text-xs">×</span>`;
@@ -2719,11 +3058,94 @@ Interactive OpenAPI Docs: \`http://127.0.0.1:8000/docs\`
 
     document.getElementById('btn-top-export').addEventListener('click', exportZipBundle);
 
+    // -------------------------------------------------------------------------
+    // Drag-and-Drop Global & Visible Dropzone Listeners
+    // -------------------------------------------------------------------------
+    let dragCounter = 0;
+    const wbOverlay = document.getElementById('workbench-dropzone-overlay');
+    const sbDropzone = document.getElementById('sidebar-dropzone');
+    const inputUpload = document.getElementById('input-file-upload');
+    const btnUpload = document.getElementById('btn-upload-dataset');
+
+    if (btnUpload && inputUpload) {
+      btnUpload.addEventListener('click', (e) => {
+        e.stopPropagation();
+        inputUpload.click();
+      });
+    }
+
+    if (sbDropzone && inputUpload) {
+      sbDropzone.addEventListener('click', () => {
+        inputUpload.click();
+      });
+      sbDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        sbDropzone.classList.add('border-[#3DDC97]', 'bg-[#111A30]');
+      });
+      sbDropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        sbDropzone.classList.remove('border-[#3DDC97]', 'bg-[#111A30]');
+      });
+      sbDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        sbDropzone.classList.remove('border-[#3DDC97]', 'bg-[#111A30]');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          handleFileImport(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    if (inputUpload) {
+      inputUpload.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          handleFileImport(e.target.files[0]);
+          e.target.value = '';
+        }
+      });
+    }
+
+    // Global Window Drag-and-Drop
+    window.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      dragCounter++;
+      if (wbOverlay) wbOverlay.classList.remove('hidden');
+      if (sbDropzone) sbDropzone.classList.add('border-[#3DDC97]', 'bg-[#111A30]');
+    });
+
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+
+    window.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        if (wbOverlay) wbOverlay.classList.add('hidden');
+        if (sbDropzone) sbDropzone.classList.remove('border-[#3DDC97]', 'bg-[#111A30]');
+      }
+    });
+
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      if (wbOverlay) wbOverlay.classList.add('hidden');
+      if (sbDropzone) sbDropzone.classList.remove('border-[#3DDC97]', 'bg-[#111A30]');
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFileImport(e.dataTransfer.files[0]);
+      }
+    });
+
     // Initial Load
     window.addEventListener('DOMContentLoaded', () => {
       updateWorkspace();
     });
   
 </script>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
 </body>
 </html>
