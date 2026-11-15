@@ -7,7 +7,6 @@ matching the generated OpenAPI specification and Pydantic models.
 from typing import Any, Union
 from datapi.infer import FieldDef
 from datapi.planner import APIPlan
-from datapi.python_sdk_generator import generate_python_sdk
 
 
 def _ts_type_annotation(f: FieldDef) -> str:
@@ -35,7 +34,6 @@ def generate_typescript_sdk(plan: Union[APIPlan, Any]) -> str:
     title = getattr(plan, "title", f"{primary_schema.resource_name.capitalize()} API")
     auth_enabled = getattr(plan, "auth_enabled", False)
     res_title = primary_schema.resource_name.capitalize()
-    pk = getattr(primary_schema, "primary_key", "id") or "id"
 
     # TypeScript Interfaces for all schemas
     interfaces_code = []

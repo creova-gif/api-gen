@@ -10,9 +10,9 @@ import difflib
 import os
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
-from datapi.diff import ChangeType, SchemaDiff, Severity
+from datapi.diff import SchemaDiff
 
 
 def generate_migration_summary(diff: SchemaDiff) -> str:

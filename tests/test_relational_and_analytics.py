@@ -12,9 +12,7 @@ import unittest
 from pathlib import Path
 
 from datapi.infer import (
-    FieldDef,
     ForeignKeyDef,
-    SchemaDef,
     infer_from_directory,
     infer_from_file,
     infer_multi_table_relationships,
@@ -65,7 +63,7 @@ class TestRelationalAndAnalytics(unittest.TestCase):
             self.assertEqual(order_schema.primary_key, "order_id")
 
             # Link relationships across schemas
-            schemas = infer_multi_table_relationships([customer_schema, order_schema])
+            infer_multi_table_relationships([customer_schema, order_schema])
 
             # Customers should have no outbound foreign keys
             self.assertEqual(len(customer_schema.foreign_keys), 0)
@@ -100,7 +98,7 @@ class TestRelationalAndAnalytics(unittest.TestCase):
             user_schema = infer_from_file(users_csv)
             post_schema = infer_from_file(posts_csv)
 
-            schemas = infer_multi_table_relationships([user_schema, post_schema])
+            infer_multi_table_relationships([user_schema, post_schema])
             self.assertEqual(len(post_schema.foreign_keys), 1)
             fk = post_schema.foreign_keys[0]
             self.assertEqual(fk.field_name, "user_id")

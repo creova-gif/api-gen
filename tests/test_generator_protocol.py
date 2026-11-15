@@ -10,7 +10,6 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from decimal import Decimal
 
 from fastapi.testclient import TestClient
 

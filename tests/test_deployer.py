@@ -12,15 +12,14 @@ import tomllib
 from pathlib import Path
 import unittest
 
-from datapi.infer import SchemaDef, FieldDef, infer_schema_from_records
+from datapi.infer import SchemaDef, FieldDef
 from datapi.planner import APIPlan, create_api_plan
 from datapi.deployer import (
     generate_fly_config,
     generate_aws_manifests,
-    generate_cloudrun_manifests,
     generate_deployment_bundle,
 )
-from datapi.cli import build_parser, main
+from datapi.cli import main
 
 
 def _create_sample_plan(auth_enabled: bool = False, resource_name: str = "widget") -> APIPlan:
