@@ -4,7 +4,7 @@ author: 'datapi'
 
 inputs:
   data-file:
-    description: 'Path to the primary raw data file (.csv, .json, .sqlite, .parquet)'
+    description: 'Path to the primary raw data file (.csv, .json, .sqlite)'
     required: true
   output-dir:
     description: 'Directory where the generated API microservice codebase will be emitted'
