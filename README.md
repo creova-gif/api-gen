@@ -17,9 +17,10 @@
   <a href="#-quickstart">Quickstart</a> •
   <a href="#-how-it-works">How It Works</a> •
   <a href="#-why-datapi-vs-alternatives">Why datapi?</a> •
-  <a href="#-generated-architecture">Generated Architecture</a> •
+  <a href="#%EF%B8%8F-configuration">Configuration</a> •
+  <a href="#-generated-project-structure">Generated Structure</a> •
   <a href="#-cli-reference">CLI Reference</a> •
-  <a href="#-brand--studio">Brand & Studio</a>
+  <a href="#-contributing">Contributing</a>
 </p>
 
 </div>
@@ -32,7 +33,7 @@ Forward-Deployed Engineers, Solutions Architects, and backend developers waste *
 
 Existing "database-to-API" tools (Hasura, PostgREST) fail in enterprise workflows because security and architecture teams **reject black-box proxy layers** in front of production data. Developers need clean, typed, inspectable, and git-committable code that integrates into standard CI/CD pipelines.
 
-**datapi solves this.** In under 50 milliseconds, datapi inspects any raw dataset and generates a complete, tested, containerized microservice repository.
+**datapi solves this.** In well under a second, datapi inspects a raw dataset and generates a complete, tested, containerized microservice repository.
 
 ---
 
@@ -53,11 +54,38 @@ Existing "database-to-API" tools (Hasura, PostgREST) fail in enterprise workflow
 
 ---
 
+## ✨ Key Features
+
+- **Schema inference** from CSV, JSON and SQLite: types (`int`, `float`, `bool`, `date`, `datetime`, `uuid`, `email`, `str`), primary keys and filter candidates.
+- **FastAPI + Pydantic v2 service** with full CRUD, pagination, free-text search and `/healthz`.
+- **OpenAPI 3.1 contract**, Swagger, ReDoc and Scalar docs.
+- **Typed SDKs**: zero-dependency TypeScript client and a Python client.
+- **Generated pytest contract suite** for every service.
+- **Optional `X-API-Key` auth** that fails closed until `API_KEY` is set.
+- **Deployment bundles** for Google Cloud Run (Terraform), Fly.io and AWS App Runner.
+- **Schema drift detection** (`datapi diff`) and consumer code patching (`datapi patch`).
+- **datapi Studio**, a local browser UI for drag-and-drop generation.
+- **Zero runtime dependencies** for the generator itself (standard library only).
+
+<!-- TODO: replace with a real screenshot or GIF of datapi Studio -->
+<p align="center"><img src="docs/images/studio-placeholder.svg" alt="datapi Studio screenshot (placeholder)" width="720" /></p>
+
+---
+
+## ✅ Prerequisites
+
+- Python **3.10+** (CI runs 3.10–3.13)
+- `pip`
+- To run a generated service: the packages in its `requirements.txt` (FastAPI, Uvicorn, Pydantic v2)
+- Optional: Docker, Terraform 1.5+ and the `gcloud` CLI for deployment
+
+---
+
 ## ⚡ Quickstart
 
 ### 1. Installation
 
-datapi requires Python 3.10+ and has **zero third-party dependencies** for the core generator:
+The core generator has **zero third-party dependencies**:
 
 ```bash
 git clone https://github.com/creova-gif/api-gen.git
@@ -212,6 +240,67 @@ Detects breaking vs. non-breaking schema drift between datasets and outputs auto
 | `--name` | `-n` | Inferred | Override resource name |
 | `--pr` | `-p` | None | Save markdown PR body for automated GitHub pull requests |
 
+### `datapi patch`
+Rewrites consumer code (`.ts`, `.tsx`, `.py`) when a schema changes. Shows a dry-run diff unless `--apply` is passed.
+
+| Flag | Shorthand | Default | Description |
+| :--- | :---: | :---: | :--- |
+| `--consumer-dir` | | `.` | Directory containing the consumer codebase (alias `--target-dir`) |
+| `--diff` | `-f` | None | Path to a schema diff JSON file |
+| `--old` / `--new` | `-a` / `-b` | None | Data files to diff (alternative to `--diff`) |
+| `--name` | `-n` | Inferred | Override resource name |
+| `--apply` | | `False` | Write patches in place |
+
+### `datapi deploy`
+Generates deployment bundles.
+
+| Flag | Shorthand | Default | Description |
+| :--- | :---: | :---: | :--- |
+| `--target` | `-t` | `all` | `cloudrun`, `fly`, `aws` or `all` |
+| `--out` | `-o` | `./deploy` | Output directory |
+| `--data` | `-d` | None | Optional input data file |
+| `--name` | `-n` | Inferred | Override service name |
+| `--auth` | | `False` | Enable API key auth in the configs |
+| `--dry-run` | | `False` | Print configs to stdout without writing files |
+
+---
+
+## ⚙️ Configuration
+
+datapi is configured through CLI flags (see above). Generated services read:
+
+| Variable | Used by | Description |
+| :--- | :--- | :--- |
+| `API_KEY` | Services generated with `--auth` | Expected `X-API-Key` value. Endpoints return `503` until it is set. |
+| `api_key` (Terraform variable) | `terraform/main.tf` | Sensitive variable stored in Secret Manager and mounted into Cloud Run. |
+
+A composite GitHub Action for CI lives in [`.github/actions/datapi-action`](.github/actions/datapi-action/action.yml); see [`docs/GITHUB_ACTION.md`](docs/GITHUB_ACTION.md).
+
+---
+
+## 🗂️ Repository Structure
+
+```text
+api-gen/
+├── datapi/                # Generator package
+│   ├── cli.py             # CLI entry point (inspect, generate, diff, patch, studio, deploy)
+│   ├── infer.py           # Schema inference for CSV / JSON / SQLite
+│   ├── planner.py         # Builds the API plan from schema + intent
+│   ├── generator.py       # FastAPI app, OpenAPI spec, tests, Dockerfile, Terraform
+│   ├── sdk_generator.py   # TypeScript SDK
+│   ├── python_sdk_generator.py
+│   ├── diff.py            # Schema drift detection
+│   ├── patcher.py         # Consumer code patcher
+│   ├── deployer.py        # Cloud Run / Fly.io / App Runner bundles
+│   ├── analytics.py       # DuckDB / SQLite analytics helpers
+│   └── studio/            # Browser UI
+├── datapi.py, apigen.py   # Run-from-source wrappers
+├── bin/                   # Shell launchers
+├── examples/              # Sample datasets
+├── tests/                 # unittest suite
+└── docs/                  # Design, brand and GitHub Action docs
+```
+
 ---
 
 ## 🎨 Brand & Design System
@@ -227,6 +316,7 @@ The official brand guidelines, design tokens, and vector assets are detailed in:
 Run the test suite across schema inference, code generation, and contract validation:
 
 ```bash
+pip install ".[test]"
 python3 -m unittest discover -s tests -v
 ```
 
@@ -243,13 +333,27 @@ python3 -m unittest discover -s tests -v
 - [x] API Key authentication via Google Secret Manager
 - [x] Synthetic mock data synthesis (`--mock`)
 - [x] Schema drift detection & automated PR generator (`datapi diff`)
+- [x] Consumer code patcher (`datapi patch`)
+- [x] Fly.io and AWS App Runner deployment bundles (`datapi deploy`)
 - [ ] Multi-table foreign key relational inference (`--schema-dir`)
-- [ ] Automated client AST code-patcher (Self-Maintaining API bot)
-- [ ] AWS ECS / Fargate Terraform provider
 - [ ] Pluggable DuckDB & SQLite persistent storage adapters
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup and PR guidelines, and follow our [Code of Conduct](CODE_OF_CONDUCT.md). Release notes are in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 ## 📄 License
 
 Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+
+---
+
+## 💬 Support
+
+- Bugs and feature requests: [open an issue](https://github.com/creova-gif/api-gen/issues)
+- Security issues: email creativeinnovationspace@gmail.com instead of opening a public issue
+- Maintainer: Justin Mafie ([@creova-gif](https://github.com/creova-gif))

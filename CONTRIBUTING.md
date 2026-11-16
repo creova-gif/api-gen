@@ -41,3 +41,7 @@ datapi is built with **zero external dependencies** for the core generator itsel
 2. Ensure existing tests pass: `python3 -m unittest discover -s tests`.
 3. Add tests covering any new behavior or bugfixes.
 4. Open a Pull Request with a clear summary of the change and rationale.
+
+## Code of Conduct
+
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By participating you agree to uphold it.

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Screenshot placeholder">
+  <rect width="1280" height="720" rx="24" fill="#0f172a"/>
+  <rect x="24" y="24" width="1232" height="672" rx="16" fill="none" stroke="#334155" stroke-width="4" stroke-dasharray="16 12"/>
+  <text x="640" y="340" fill="#e2e8f0" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="44" font-weight="600" text-anchor="middle">datapi Studio</text>
+  <text x="640" y="400" fill="#94a3b8" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="28" text-anchor="middle">Screenshot or demo GIF coming soon</text>
+</svg>
