@@ -14,8 +14,9 @@ datapi is built with **zero external dependencies** for the core generator itsel
    cd api-gen
    ```
 
-2. **Verify tests pass:**
+2. **Verify tests pass** (the generator itself has no dependencies; the tests that exercise generated apps need FastAPI):
    ```bash
+   pip install ".[test]"
    python3 -m unittest discover -s tests -v
    ```
 

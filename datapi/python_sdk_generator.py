@@ -39,7 +39,6 @@ def generate_python_sdk(plan: Union[APIPlan, Any]) -> str:
 
     multi_entity_methods = []
     for s in schemas:
-        s_title = s.resource_name.capitalize()
         s_res = s.resource_name
         s_plural = s.plural_name
 
