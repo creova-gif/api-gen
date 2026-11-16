@@ -3,14 +3,10 @@ Datapi Code & Specification Generator.
 Generates OpenAPI 3.1, FastAPI app with Pydantic models, Dockerfile, Terraform for Cloud Run, and Docs.
 """
 
-import base64
 from datetime import date, datetime, timedelta
-from decimal import Decimal
-import http
 import json
 import pprint
 import random
-import time
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List

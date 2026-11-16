@@ -124,8 +124,8 @@ def synthesize_timeseries_sql(
     if metric_col:
         metric_cte = f',\n        SUM("{metric_col}") AS sum_metric,\n        AVG("{metric_col}") AS avg_metric'
         window_select += (
-            f',\n    sum_metric,\n    avg_metric,\n'
-            f'    ROUND(AVG(avg_metric) OVER (ORDER BY period ROWS BETWEEN 6 PRECEDING AND CURRENT ROW), 2) AS moving_avg_7d'
+            ',\n    sum_metric,\n    avg_metric,\n'
+            '    ROUND(AVG(avg_metric) OVER (ORDER BY period ROWS BETWEEN 6 PRECEDING AND CURRENT ROW), 2) AS moving_avg_7d'
         )
 
     sql = f"""WITH aggregated AS (
@@ -166,7 +166,7 @@ class DuckDBAnalyticsEngine:
         if DUCKDB_AVAILABLE:
             try:
                 con = duckdb.connect(":memory:")
-                rows = self.records
+                rows = self.records  # noqa: F841 - read by DuckDB replacement scan in the SQL below
                 con.execute("CREATE TABLE records AS SELECT * FROM rows")
                 res = con.execute(sql_duckdb).fetchall()
                 cols = [d[0] for d in con.description]
@@ -387,7 +387,7 @@ ORDER BY period ASC"""
 '''
         endpoints_code.append(endpoint_block)
 
-    header = f'''# --- Turnkey DuckDB Vectorized Analytics Endpoints ---
+    header = '''# --- Turnkey DuckDB Vectorized Analytics Endpoints ---
 
 try:
     import duckdb as _duckdb
@@ -424,11 +424,11 @@ def _execute_analytics_query(
     conn.row_factory = _sqlite3.Row
     cur = conn.cursor()
     keys = list(records[0].keys())
-    cols = ", ".join(f\'"{{k}}"\' for k in keys)
+    cols = ", ".join(f\'"{k}"\' for k in keys)
     placeholders = ", ".join("?" for _ in keys)
-    cur.execute(f"CREATE TABLE records ({{cols}})")
+    cur.execute(f"CREATE TABLE records ({cols})")
     cur.executemany(
-        f"INSERT INTO records VALUES ({{placeholders}})",
+        f"INSERT INTO records VALUES ({placeholders})",
         [[r.get(k) for k in keys] for r in records],
     )
     cur.execute(sql_sqlite)
