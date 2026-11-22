@@ -6,7 +6,7 @@
 
 **Turn raw schemas and legacy data into tested, containerized, production-ready APIs in seconds.**
 
-[![CI](https://github.com/creova-gif/api-gen/actions/workflows/ci.yml/badge.svg)](https://github.com/creova-gif/api-gen/actions)
+[![CI](https://github.com/creova-gif/datapi/actions/workflows/ci.yml/badge.svg)](https://github.com/creova-gif/datapi/actions)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1.0-6BA539.svg?logo=openapi-initiative&logoColor=white)](https://spec.openapis.org/oas/v3.1.0)
@@ -88,8 +88,8 @@ Existing "database-to-API" tools (Hasura, PostgREST) fail in enterprise workflow
 The core generator has **zero third-party dependencies**:
 
 ```bash
-git clone https://github.com/creova-gif/api-gen.git
-cd api-gen
+git clone https://github.com/creova-gif/datapi.git
+cd datapi
 ```
 
 *(Optional: install globally via pip)*
@@ -281,7 +281,7 @@ A composite GitHub Action for CI lives in [`.github/actions/datapi-action`](.git
 ## 🗂️ Repository Structure
 
 ```text
-api-gen/
+datapi/
 ├── datapi/                # Generator package
 │   ├── cli.py             # CLI entry point (inspect, generate, diff, patch, studio, deploy)
 │   ├── infer.py           # Schema inference for CSV / JSON / SQLite
@@ -354,6 +354,6 @@ Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
 
 ## 💬 Support
 
-- Bugs and feature requests: [open an issue](https://github.com/creova-gif/api-gen/issues)
+- Bugs and feature requests: [open an issue](https://github.com/creova-gif/datapi/issues)
 - Security issues: email creativeinnovationspace@gmail.com instead of opening a public issue
 - Maintainer: Justin Mafie ([@creova-gif](https://github.com/creova-gif))

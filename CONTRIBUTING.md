@@ -10,8 +10,8 @@ datapi is built with **zero external dependencies** for the core generator itsel
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/creova-gif/api-gen.git
-   cd api-gen
+   git clone https://github.com/creova-gif/datapi.git
+   cd datapi
    ```
 
 2. **Verify tests pass** (the generator itself has no dependencies; the tests that exercise generated apps need FastAPI):

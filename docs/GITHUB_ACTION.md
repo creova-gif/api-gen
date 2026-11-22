@@ -9,7 +9,7 @@ Turn any CSV, JSON, or SQLite dataset into a self-maintaining, continuously test
 
 ```yaml
 - name: Generate & Verify Data API
-  uses: creova-gif/api-gen/.github/actions/datapi-action@main
+  uses: creova-gif/datapi/.github/actions/datapi-action@main
   with:
     data-file: data/customers.csv
 ```
@@ -74,7 +74,7 @@ jobs:
           git show main:data/customers.csv > /tmp/customers_baseline.csv || true
 
       - name: Run datapi Contract Verification
-        uses: creova-gif/api-gen/.github/actions/datapi-action@main
+        uses: creova-gif/datapi/.github/actions/datapi-action@main
         with:
           data-file: data/customers.csv
           old-schema: /tmp/customers_baseline.csv
@@ -109,7 +109,7 @@ jobs:
 
       - name: Generate API Microservice
         id: datapi
-        uses: creova-gif/api-gen/.github/actions/datapi-action@main
+        uses: creova-gif/datapi/.github/actions/datapi-action@main
         with:
           data-file: data/inventory.json
           output-dir: ./dist/inventory-service
@@ -150,7 +150,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Synthesize Tested Microservice
-        uses: creova-gif/api-gen/.github/actions/datapi-action@main
+        uses: creova-gif/datapi/.github/actions/datapi-action@main
         with:
           data-file: data/transactions.csv
           output-dir: ./dist/transactions-api
