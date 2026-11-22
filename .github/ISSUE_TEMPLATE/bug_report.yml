@@ -38,5 +38,4 @@ body:
     id: logs
     attributes:
       label: Logs or screenshots
-      description: Paste relevant output. It will be formatted as code.
-      render: shell
+      description: Paste relevant output inside a fenced code block, or drag in screenshots.
