@@ -72,20 +72,6 @@ Existing "database-to-API" tools (Hasura, PostgREST) fail in enterprise workflow
 
 ---
 
-## 🧰 Tech Stack
-
-| Layer | Technology | Version |
-|---|---|---|
-| Language | Python | 3.10+ (CI: 3.10–3.13) |
-| Runtime dependencies | Standard library only (`sqlite3`, `csv`, `json`, `http.server`) | — |
-| Generated services | FastAPI | ≥0.110, <1.0 |
-| Generated SDKs | TypeScript and Python clients (no third-party dependencies) | — |
-| Generated infrastructure | Terraform | — |
-| Testing | `unittest`/pytest, HTTPX | HTTPX ≥0.27 |
-| Packaging | setuptools (`pyproject.toml`) | — |
-
-Versions come from `pyproject.toml` and `.github/workflows/`.
-
 ## ✅ Prerequisites
 
 - Python **3.10+** (CI runs 3.10–3.13)
