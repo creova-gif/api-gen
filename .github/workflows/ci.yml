@@ -13,14 +13,14 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v7
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
       with:
         python-version: "3.12"
     - name: Ruff (errors and pyflakes)
       run: |
         pip install ruff
-        ruff check --select E9,F datapi datapi.py tests
+        ruff check --select E9,F datapi datapi.py apigen.py tests
 
   test:
     runs-on: ubuntu-latest
@@ -29,10 +29,10 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -43,7 +43,7 @@ jobs:
       run: |
         python -m unittest discover -s tests -v
 
-    - name: Verify CLI Generation & Self-Maintaining Diff
+    - name: Verify CLI Generation, Deployment Bundles & Self-Maintaining Diff
       run: |
         python datapi.py inspect -d examples/customers.csv
         python datapi.py generate -d examples/customers.csv -o ./test_api --auth --mock 10
@@ -53,6 +53,11 @@ jobs:
         test -f test_api/terraform/main.tf
         test -f test_api/sdk/client.ts
         test -f test_api/sdk/client.py
+        python datapi.py deploy -d examples/customers.csv -o ./test_deploy --target all --auth
+        test -f test_deploy/fly.toml
+        test -f test_deploy/terraform/main.tf
+        test -f test_deploy/terraform/aws_apprunner.tf
+        ! grep -q "REPLACE_WITH_SECRET" test_deploy/terraform/aws_apprunner.tf
         python datapi.py diff -a examples/customers.csv -b examples/customers_v2.csv --pr pr_test.md
         test -f pr_test.md
 
@@ -68,8 +73,8 @@ jobs:
   package:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v7
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
       with:
         python-version: "3.12"
     - name: Build and install wheel
@@ -88,8 +93,8 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v7
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
       with:
         python-version: "3.12"
     - name: Build generated service image

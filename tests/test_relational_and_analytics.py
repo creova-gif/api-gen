@@ -9,15 +9,18 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from datapi.infer import (
+    _duckdb,
     ForeignKeyDef,
     infer_from_directory,
     infer_from_file,
     infer_multi_table_relationships,
     infer_schema_from_records,
 )
+from datapi.planner import create_api_plan
 from datapi.analytics import (
     DuckDBAnalyticsEngine,
     generate_analytics_endpoints,
@@ -281,6 +284,48 @@ class TestRelationalAndAnalytics(unittest.TestCase):
         self.assertEqual(ts_rows[1]["count"], 1)
         self.assertEqual(ts_rows[1]["cumulative_count"], 3)
         self.assertEqual(ts_rows[1]["sum_metric"], 150.0)
+
+    def test_analytics_sql_identifier_allowlist_and_auth_guard(self):
+        records = [
+            {"id": 1, "amount": 100.0, "category": "books", "created_at": "2026-11-01"},
+        ]
+        schema = infer_schema_from_records(records, resource_name="sale")
+
+        with self.assertRaises(ValueError):
+            synthesize_summary_sql(schema, group_by="nonexistent_column")
+        with self.assertRaises(ValueError):
+            synthesize_summary_sql(schema, group_by='category"; DROP TABLE records; --')
+        with self.assertRaises(ValueError):
+            synthesize_timeseries_sql(schema, interval="hourly; DROP TABLE records")
+        with self.assertRaises(ValueError):
+            synthesize_timeseries_sql(schema, metric_field="unknown_metric")
+
+        plan_auth = create_api_plan(schema, auth_enabled=True)
+        auth_analytics_code = generate_duckdb_analytics_code(plan_auth)
+        self.assertIn("dependencies=[Depends(verify_api_key)]", auth_analytics_code)
+
+    def test_parquet_ingestion_and_fail_closed_without_duckdb(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            parquet_path = Path(tmpdir) / "events.parquet"
+            parquet_path.write_bytes(b"PAR1")
+            with patch("datapi.infer._duckdb", None):
+                with self.assertRaises(RuntimeError) as ctx:
+                    infer_from_file(parquet_path)
+                self.assertIn("datapi[analytics]", str(ctx.exception))
+
+            if _duckdb is not None:
+                con = _duckdb.connect(":memory:")
+                escaped = str(parquet_path).replace("'", "''")
+                con.execute(
+                    f"COPY (SELECT 1 AS event_id, 'signup' AS kind, 42.5 AS latency_ms) "
+                    f"TO '{escaped}' (FORMAT PARQUET)"
+                )
+                con.close()
+                schema = infer_from_file(parquet_path)
+                self.assertEqual(schema.resource_name, "event")
+                self.assertEqual(schema.primary_key, "event_id")
+                field_map = {f.name: f for f in schema.fields}
+                self.assertEqual(field_map["latency_ms"].python_type, "float")
 
 
 if __name__ == "__main__":

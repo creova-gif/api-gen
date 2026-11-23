@@ -75,18 +75,20 @@ To make datapi **10x better than any developer company**, the web UI must not be
 
 ## 4. Execution Roadmap
 
-1. **Phase 1 (Completed):**
-   - Core Schema Inference (CSV, JSON, SQLite).
-   - FastAPI + Pydantic v2 + Dockerfile + Terraform Generator.
-   - Turnkey Auth (`--auth`) + Synthetic Mock Generator (`--mock`).
-   - Schema Drift & Breaking Change Detection (`datapi diff`).
-   - Autonomous PR Markdown Generator.
+1. **Phase 1 — Compiler Core & Cloud Run IaC (Completed):**
+   - [x] Core Schema & Foreign-Key Inference (CSV, JSON, SQLite, multi-table directories).
+   - [x] FastAPI + Pydantic v2 + RFC 7807 + Non-Root Dockerfile + GCP Cloud Run Terraform Generator.
+   - [x] Turnkey Fail-Closed Auth (`--auth`) + Synthetic Mock Generator (`--mock`).
+   - [x] Schema Drift & Breaking Change Detection (`datapi diff`) + Autonomous PR Markdown Generator.
 
-2. **Phase 2 (Current Focus):**
-   - **TypeScript Client SDK Generation (`sdk/ts`)**: Auto-emit typed frontend client alongside the backend.
-   - **Modern Interactive UI (`Scalar`)**: Embed Scalar HTML documentation viewer in addition to Swagger/Redoc.
-   - **DuckDB Vectorized Analytics Adapter (`--db duckdb`)**: Instant analytical endpoints for large datasets.
+2. **Phase 2 — SDKs, Analytics & Multi-Cloud Evolution (Completed):**
+   - [x] Zero-dependency TypeScript (`sdk/client.ts`) and Python (`sdk/client.py`) Client SDK Generation with backoff retries.
+   - [x] Modern Interactive API Reference (`Scalar` + Swagger + ReDoc).
+   - [x] DuckDB Vectorized Analytics & Parquet Adapter (`datapi[analytics]` with automatic SQLite window-function fallback).
+   - [x] Consumer AST Code Patcher (`datapi patch`) & Multi-Cloud IaC (`AWS App Runner` Secrets Manager + `Fly.io`).
+   - [x] Local Browser Studio (`datapi studio`) with live schema preview, request simulator, and ZIP export.
 
-3. **Phase 3 (Enterprise & Cloud UI):**
-   - In-browser interactive preview studio (Pyodide WASM).
-   - GitHub App for autonomous pull requests on consumer repositories.
+3. **Phase 3 — Live Database Introspection & Hosted Automation (Planned):**
+   - [ ] Live PostgreSQL / MySQL wire-protocol introspection (`--db-uri`).
+   - [ ] Pyodide WebAssembly in-browser FastAPI runtime execution inside Studio.
+   - [ ] Hosted GitHub App webhook bot for autonomous pull requests across downstream repositories.

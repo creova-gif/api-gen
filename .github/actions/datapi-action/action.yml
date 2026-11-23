@@ -48,7 +48,7 @@ runs:
   steps:
     # 1. Sets up Python
     - name: Set up Python ${{ inputs.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
       with:
         python-version: ${{ inputs.python-version }}
 

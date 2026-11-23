@@ -6,13 +6,15 @@ and self-maintaining schema diffing / PR generation.
 
 import ast
 import json
+import re
 import tempfile
 from pathlib import Path
 import unittest
+import uuid
 
 from datapi.infer import infer_schema_from_records
 from datapi.planner import create_api_plan
-from datapi.generator import generate_project
+from datapi.generator import _generate_synthetic_record, generate_project
 from datapi.diff import diff_schemas, ChangeType, Severity
 from datapi.patcher import generate_pr_markdown
 
@@ -44,8 +46,6 @@ class TestDatapi(unittest.TestCase):
         self.assertEqual(field_map["token"].openapi_format, "uuid")
 
     def test_uuid_mocks_are_valid_uuids(self):
-        import uuid
-        from datapi.generator import _generate_synthetic_record
         records = [
             {"uuid": "0b6c7f0e-9a3e-4c1e-8f43-2f6a1d9b7c11", "owner": "a@example.com"},
             {"uuid": "5d2a8e4b-1c3f-4b7a-9e6d-8a0f2c4e6b13", "owner": "b@example.com"},
@@ -110,14 +110,20 @@ class TestDatapi(unittest.TestCase):
             seed = ast.literal_eval(seed_node)
             self.assertEqual(len(seed), 10)
 
-            # No hardcoded API keys anywhere in the generated project
+            # No hardcoded API keys or wildcard-credentialed CORS anywhere in the generated project
             self.assertNotIn("default-dev-secret-key", code)
             self.assertIn("hmac.compare_digest", code)
+            self.assertIn("CORS_ALLOW_ORIGINS", code)
+            self.assertNotIn("allow_credentials=True", code)
             with open(files["terraform/main.tf"], "r") as f:
                 tf = f.read()
             self.assertIn("secret_data = var.api_key", tf)
             self.assertIn("sensitive   = true", tf)
             self.assertNotIn("change-me", tf)
+            self.assertNotIn("REPLACE_WITH_SECRET", tf)
+            api_key_var_match = re.search(r'variable\s+"api_key"\s*\{([^}]*)\}', tf)
+            self.assertIsNotNone(api_key_var_match)
+            self.assertNotIn("default", api_key_var_match.group(1))
 
             # Test-only dependencies stay out of the production image
             with open(files["requirements.txt"], "r") as f:

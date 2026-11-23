@@ -1,6 +1,6 @@
 """
 Datapi Schema Inference Engine.
-Infers field types, nullability, primary keys, and enums from CSV, JSON, and SQLite sources.
+Infers field types, nullability, primary keys, and enums from CSV, JSON, SQLite, and Parquet sources.
 """
 
 import csv
@@ -10,6 +10,11 @@ import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+
+try:
+    import duckdb as _duckdb
+except ImportError:
+    _duckdb = None
 
 
 @dataclass
@@ -233,12 +238,28 @@ def infer_from_file(file_path: Union[str, Path], resource_name: Optional[str] = 
         cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
         tables = [r[0] for r in cur.fetchall()]
         if not tables:
+            conn.close()
             raise ValueError(f"No tables found in SQLite database {path}")
         target_table = tables[0]
-        cur.execute(f"SELECT * FROM {target_table} LIMIT 100")
+        escaped_table = str(target_table).replace('"', '""')
+        cur.execute(f'SELECT * FROM "{escaped_table}" LIMIT 100')
         rows = [dict(r) for r in cur.fetchall()]
         conn.close()
         return infer_schema_from_records(rows, resource_name=resource_name or target_table.rstrip("s").lower())
+
+    elif path.suffix.lower() == ".parquet":
+        if _duckdb is None:
+            raise RuntimeError(
+                "Parquet ingestion requires the optional 'duckdb' extra: pip install 'datapi[analytics]'"
+            )
+        con = _duckdb.connect(":memory:")
+        try:
+            res = con.execute("SELECT * FROM read_parquet(?) LIMIT 1000", [str(path)])
+            cols = [d[0] for d in res.description]
+            rows = [dict(zip(cols, row)) for row in res.fetchall()]
+        finally:
+            con.close()
+        return infer_schema_from_records(rows, resource_name=res_name)
 
     else:
         raise ValueError(f"Unsupported file extension: {path.suffix}")
@@ -331,7 +352,7 @@ def infer_from_directory(dir_path: Union[str, Path]) -> List[SchemaDef]:
         if not f.is_file() or f.name.startswith("."):
             continue
         ext = f.suffix.lower()
-        if ext in (".csv", ".json"):
+        if ext in (".csv", ".json", ".parquet"):
             try:
                 schemas.append(infer_from_file(f))
             except Exception:
@@ -344,7 +365,8 @@ def infer_from_directory(dir_path: Union[str, Path]) -> List[SchemaDef]:
                 cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
                 tables = [r[0] for r in cur.fetchall()]
                 for table in tables:
-                    cur.execute(f'SELECT * FROM "{table}" LIMIT 100')
+                    escaped_table = str(table).replace('"', '""')
+                    cur.execute(f'SELECT * FROM "{escaped_table}" LIMIT 100')
                     rows = [dict(r) for r in cur.fetchall()]
                     if rows:
                         schemas.append(infer_schema_from_records(rows, resource_name=table.rstrip("s").lower()))

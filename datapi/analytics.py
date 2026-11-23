@@ -5,6 +5,7 @@ with high-speed aggregation (COUNT, AVG, MIN, MAX, SUM for numeric fields,
 grouped by categorical/enum fields) and automatic fallback to SQLite window functions.
 """
 
+import re
 import sqlite3
 from typing import Any, Dict, List, Optional, Tuple, Union
 from datapi.infer import FieldDef, SchemaDef
@@ -15,6 +16,15 @@ try:
 except ImportError:
     duckdb = None
     DUCKDB_AVAILABLE = False
+
+_SAFE_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_VALID_INTERVALS = ("day", "month", "year")
+
+
+def _validate_identifier(name: str, context: str = "identifier") -> str:
+    if not isinstance(name, str) or not _SAFE_IDENT_RE.fullmatch(name):
+        raise ValueError(f"Unsafe SQL {context}: {name!r}")
+    return name
 
 
 def _get_numeric_fields(schema: SchemaDef) -> List[FieldDef]:
@@ -65,13 +75,23 @@ def synthesize_summary_sql(
     Synthesizes vectorized summary SQL query (COUNT, AVG, MIN, MAX, SUM).
     Works interchangeably in DuckDB and SQLite.
     """
+    _validate_identifier(table_name, "table_name")
+    allowed_fields = {f.name for f in schema.fields}
+    if group_by is not None:
+        _validate_identifier(group_by, "group_by")
+        if group_by not in allowed_fields:
+            raise ValueError(
+                f"Invalid group_by field '{group_by}'. Allowed schema fields: {sorted(allowed_fields)}"
+            )
+
     numeric_fields = _get_numeric_fields(schema)
     aggs = ["COUNT(*) AS total_count"]
     for f in numeric_fields:
-        aggs.append(f'AVG("{f.name}") AS avg_{f.name}')
-        aggs.append(f'MIN("{f.name}") AS min_{f.name}')
-        aggs.append(f'MAX("{f.name}") AS max_{f.name}')
-        aggs.append(f'SUM("{f.name}") AS sum_{f.name}')
+        col = _validate_identifier(f.name, "numeric_field")
+        aggs.append(f'AVG("{col}") AS avg_{col}')
+        aggs.append(f'MIN("{col}") AS min_{col}')
+        aggs.append(f'MAX("{col}") AS max_{col}')
+        aggs.append(f'SUM("{col}") AS sum_{col}')
 
     agg_clause = ",\n    ".join(aggs)
 
@@ -97,11 +117,29 @@ def synthesize_timeseries_sql(
     Synthesizes vectorized timeseries SQL with time bucketing and window functions.
     Supports 'duckdb' and 'sqlite' engines.
     """
+    _validate_identifier(table_name, "table_name")
+    if interval not in _VALID_INTERVALS:
+        raise ValueError(f"Invalid interval '{interval}'. Allowed: {_VALID_INTERVALS}")
+
+    allowed_fields = {f.name for f in schema.fields}
+    if date_field is not None:
+        _validate_identifier(date_field, "date_field")
+        if date_field not in allowed_fields:
+            raise ValueError(f"Invalid date_field '{date_field}'. Allowed schema fields: {sorted(allowed_fields)}")
+    if metric_field is not None:
+        _validate_identifier(metric_field, "metric_field")
+        if metric_field not in allowed_fields:
+            raise ValueError(f"Invalid metric_field '{metric_field}'. Allowed schema fields: {sorted(allowed_fields)}")
+
     date_cols = _get_date_fields(schema)
-    date_col = date_field or (date_cols[0].name if date_cols else (schema.primary_key or "id"))
+    date_col = _validate_identifier(
+        date_field or (date_cols[0].name if date_cols else (schema.primary_key or "id")),
+        "date_col",
+    )
 
     numeric_cols = _get_numeric_fields(schema)
-    metric_col = metric_field or (numeric_cols[0].name if numeric_cols else None)
+    raw_metric = metric_field or (numeric_cols[0].name if numeric_cols else None)
+    metric_col = _validate_identifier(raw_metric, "metric_col") if raw_metric else None
 
     # Time bucket expression per engine
     if engine == "duckdb":
@@ -178,7 +216,7 @@ class DuckDBAnalyticsEngine:
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        keys = list(self.records[0].keys())
+        keys = [_validate_identifier(str(k), "column") for k in self.records[0].keys()]
         cols = ", ".join(f'"{k}"' for k in keys)
         placeholders = ", ".join("?" for _ in keys)
         cur.execute(f"CREATE TABLE records ({cols})")
@@ -237,6 +275,9 @@ def generate_duckdb_analytics_code(schema: Union[SchemaDef, List[SchemaDef], Any
     Uses DuckDB in-memory engine when installed, with fallback to SQLite window functions.
     Supports a single SchemaDef, a list of SchemaDef objects, or an APIPlan.
     """
+    auth_enabled = bool(getattr(schema, "auth_enabled", False))
+    endpoint_security = ",\n    dependencies=[Depends(verify_api_key)]," if auth_enabled else ","
+
     if hasattr(schema, "all_schemas"):
         schemas = schema.all_schemas
     elif isinstance(schema, list):
@@ -262,7 +303,7 @@ def generate_duckdb_analytics_code(schema: Union[SchemaDef, List[SchemaDef], Any
 @{app_variable}.get(
     "/{plural}/analytics/summary",
     tags=["Analytics"],
-    summary="Vectorized summary analytics for {plural}",
+    summary="Vectorized summary analytics for {plural}"{endpoint_security}
 )
 def get_{plural}_analytics_summary(
     group_by: Optional[str] = Query(None, description="Categorical or enum field to group by"),
@@ -311,7 +352,7 @@ def get_{plural}_analytics_summary(
 @{app_variable}.get(
     "/{plural}/analytics/timeseries",
     tags=["Analytics"],
-    summary="Vectorized timeseries analytics for {plural}",
+    summary="Vectorized timeseries analytics for {plural}"{endpoint_security}
 )
 def get_{plural}_analytics_timeseries(
     date_field: Optional[str] = Query(None, description="Date or datetime column to bucket by"),
@@ -322,6 +363,24 @@ def get_{plural}_analytics_timeseries(
     rows = list(target_db.values())
     if not rows:
         return {{"resource": "{plural}", "total": 0, "timeseries": [], "engine": "none"}}
+
+    all_fields = {all_fields_repr}
+    numeric_cols = {numeric_cols_repr}
+    if interval not in ("day", "month", "year"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid interval: {{interval}}. Allowed: day, month, year",
+        )
+    if date_field and date_field not in all_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid date_field: {{date_field}}. Allowed fields: {{all_fields}}",
+        )
+    if metric and metric not in numeric_cols and metric not in all_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid metric: {{metric}}. Allowed fields: {{numeric_cols}}",
+        )
 
     date_col = date_field or "{default_date_field}"
     metric_col = metric or ("{default_metric_field}" if "{default_metric_field}" else None)
@@ -396,9 +455,12 @@ except ImportError:
     _duckdb = None
     _DUCKDB_AVAILABLE = False
 
+import re as _re
 import sqlite3 as _sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 from fastapi import Query, HTTPException, status
+
+_ANALYTICS_IDENT_RE = _re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _execute_analytics_query(
@@ -423,7 +485,11 @@ def _execute_analytics_query(
     conn = _sqlite3.connect(":memory:")
     conn.row_factory = _sqlite3.Row
     cur = conn.cursor()
-    keys = list(records[0].keys())
+    keys = [str(k) for k in records[0].keys()]
+    for k in keys:
+        if not _ANALYTICS_IDENT_RE.fullmatch(k):
+            conn.close()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid column identifier: {k}")
     cols = ", ".join(f\'"{k}"\' for k in keys)
     placeholders = ", ".join("?" for _ in keys)
     cur.execute(f"CREATE TABLE records ({cols})")
