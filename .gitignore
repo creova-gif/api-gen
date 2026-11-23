@@ -25,21 +25,32 @@ share/python-wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
+# Virtual environments & secrets
 .env
-.venv
+.env.*
+!.env.example
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Generated API testing output
+# Generated API testing output & local DBs
 generated_*/
 output_*/
 demo_*/
+test_api*/
+docker_api/
+*.db
+*.sqlite*
 
-# IDE & OS
+# Agent & IDE scratch
+.claude/
+.conductor/
+.gstack/
+.devin/
+.pytest_cache/
 .DS_Store
 .vscode/
 .idea/

@@ -1,0 +1,14 @@
+name: api-gen
+owner: creova-gif
+
+stack:
+  language: [python]
+  framework: [stdlib-cli, fastapi, pydantic-v2]
+
+# null = no command configured -> agents MUST report NOT VERIFIED for that gate
+verification:
+  install: pip install -e ".[test]"
+  lint: python3 -m compileall -q datapi datapi.py apigen.py tests
+  typecheck: null
+  test: python3 -m unittest discover -s tests -v
+  build: null
