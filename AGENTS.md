@@ -23,6 +23,7 @@ Project facts, stack, and verification gates are declared in [`.ai/project.yaml`
 Run all gates from the repository root (if a gate cannot run, report `NOT VERIFIED` with the reason):
 ```bash
 pip install -e ".[test]"
+pip install ruff
 ruff check --select E9,F datapi datapi.py apigen.py tests
 python3 -m compileall -q datapi datapi.py apigen.py tests
 python3 -m unittest discover -s tests -v

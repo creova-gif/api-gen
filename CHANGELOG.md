@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Vectorized DuckDB & SQLite Window Analytics (`datapi/analytics.py`)**:
   - Synthesizes `/<plural>/analytics/summary` (`COUNT`, `AVG`, `MIN`, `MAX`, `SUM`, `GROUP BY`) and `/<plural>/analytics/timeseries` (cumulative sums and 7-period moving averages) using embedded DuckDB when available with automatic fallback to stdlib SQLite window functions.
 - **Zero-Dependency Python & TypeScript Client SDKs (`datapi/python_sdk_generator.py`, `datapi/sdk_generator.py`)**:
-  - Emits `sdk/client.py` (`urllib.request`) and `sdk/client.ts` (`fetch`) with typed models, cursor pagination helpers, `AbortSignal` / socket timeouts, exponential backoff retries on `429`/`5xx`, and RFC 7807 `DatapiAPIError` exceptions.
+  - Emits `sdk/client.py` (`urllib.request`) and `sdk/client.ts` (`fetch`) with typed models, cursor pagination helpers, `AbortSignal` / socket timeouts, exponential backoff retries on `HTTP 429` and `503`, and RFC 7807 `DatapiAPIError` exceptions.
 - **Consumer AST Code Patcher (`datapi/patcher.py`, `datapi patch`)**:
   - Rewrites downstream `.py`, `.ts`, `.tsx`, `.js`, and `.jsx` consumer files on schema renames/removals with dry-run unified diffs by default and `ast.parse()` syntax validation before disk writes.
 - **Multi-Cloud Deployment Bundles (`datapi/deployer.py`, `datapi deploy`)**:

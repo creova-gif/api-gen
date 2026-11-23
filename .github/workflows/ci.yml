@@ -57,7 +57,10 @@ jobs:
         test -f test_deploy/fly.toml
         test -f test_deploy/terraform/main.tf
         test -f test_deploy/terraform/aws_apprunner.tf
-        ! grep -q "REPLACE_WITH_SECRET" test_deploy/terraform/aws_apprunner.tf
+        if grep -q "REPLACE_WITH_SECRET" test_deploy/terraform/aws_apprunner.tf; then
+          echo "Generated App Runner configuration contains a secret placeholder"
+          exit 1
+        fi
         python datapi.py diff -a examples/customers.csv -b examples/customers_v2.csv --pr pr_test.md
         test -f pr_test.md
 

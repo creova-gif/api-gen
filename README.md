@@ -83,10 +83,10 @@ flowchart LR
 | Subsystem | Status | Implementation & Verification Notes |
 | :--- | :--- | :--- |
 | **Zero-Dep Schema & FK Inference (`datapi/infer.py`)** | `Implemented & Verified` | Pure Python 3.10+ stdlib ingestion for `.csv`, `.json`, `.sqlite`/`.db`, and multi-table directories; detects `int`, `float`, `Decimal`, `bool`, `date`, `datetime`, `email`, `uuid`, enums, PKs, and cross-table FKs |
-| **Parquet & DuckDB OLAP (`datapi[analytics]`)** | `Implemented (Optional Extra)` | Optional `duckdb>=1.0.0` extra enables native `.parquet` ingestion (`read_parquet(?)`) and vectorized `/analytics/summary` & `/analytics/timeseries` execution, falling back automatically to stdlib `sqlite3` window functions when DuckDB is absent |
+| **Parquet & DuckDB OLAP (`datapi[analytics]`)** | `Implemented (Optional Extra)` | Optional `duckdb>=1.0.0` extra enables native `.parquet` ingestion (`read_parquet(?)`). Generated `/analytics/summary` & `/analytics/timeseries` endpoints use DuckDB when `duckdb` is installed in the service environment and fall back automatically to stdlib `sqlite3` window functions by default |
 | **FastAPI + OpenAPI 3.1 Synthesizer (`datapi/generator.py`)** | `Implemented & Verified` | Emits Pydantic v2 models, CRUD routes, keyset cursor + offset pagination, `Idempotency-Key` replay cache, RFC 7807 `application/problem+json` errors, `/healthz`, Scalar/Swagger/ReDoc UI, and non-root `Dockerfile` |
 | **Fail-Closed Auth & Strict CORS** | `Implemented & Verified` | `--auth` enforces constant-time `hmac.compare_digest` over `X-API-Key` across CRUD and `/analytics/*` routes, returning `503` if `API_KEY` is unset; `CORS_ALLOW_ORIGINS` never combines `*` with `allow_credentials=True` |
-| **Typed Python & TypeScript SDKs (`sdk_generator.py`, `python_sdk_generator.py`)** | `Implemented & Verified` | Zero-dependency `sdk/client.ts` (`fetch`) and `sdk/client.py` (`urllib.request`) with cursor helpers, timeouts, exponential backoff retries (`429`/`5xx`), and RFC 7807 error classes |
+| **Typed Python & TypeScript SDKs (`sdk_generator.py`, `python_sdk_generator.py`)** | `Implemented & Verified` | Zero-dependency `sdk/client.ts` (`fetch`) and `sdk/client.py` (`urllib.request`) with cursor helpers, timeouts, exponential backoff retries (`HTTP 429` & `503`), and RFC 7807 error classes |
 | **Schema Drift Diff & AST Consumer Patcher (`diff.py`, `patcher.py`)** | `Implemented & Verified` | Classifies breaking vs. non-breaking drift, generates PR markdown, and rewrites `.py`/`.ts`/`.tsx` consumers with dry-run unified diffs and `ast.parse()` syntax gates |
 | **Multi-Cloud IaC Deployer (`datapi/deployer.py`)** | `Implemented & Verified` | Emits Google Cloud Run v2 (`terraform/main.tf`), AWS App Runner (`terraform/aws_apprunner.tf`), and Fly.io (`fly.toml`) manifests with `sensitive = true` secret variables wired to GCP Secret Manager and AWS Secrets Manager |
 | **Datapi Studio Browser UI (`datapi/studio/`)** | `Implemented & Verified` | Local stdlib HTTP server (`datapi studio`, bound to `127.0.0.1` by default) with browser-side schema inspection, request simulator, live code previews, and ZIP export |
@@ -194,7 +194,7 @@ uvicorn app.main:app --port 8080 --reload
 - **Scalar Reference UI:** `http://localhost:8080/scalar`
 - **ReDoc Reference:** `http://localhost:8080/redoc`
 - **Health Probe:** `http://localhost:8080/healthz`
-- **Vectorized Analytics:** `http://localhost:8080/customers/analytics/summary?group_by=plan_tier`
+- **Vectorized Analytics:** `curl -H "X-API-Key: $API_KEY" "http://localhost:8080/customers/analytics/summary?group_by=plan_tier"`
 
 ---
 
@@ -261,8 +261,9 @@ Read [`SECURITY.md`](SECURITY.md) for the full threat model covering authenticat
 ## 🧪 Local Development & Verification
 
 ```bash
-# 1. Install test (and optional DuckDB/Parquet analytics) extras
+# 1. Install test (and optional DuckDB/Parquet analytics) extras + Ruff linter
 pip install -e ".[test,analytics]"
+pip install ruff
 
 # 2. Run Ruff static checks & bytecode compilation
 ruff check --select E9,F datapi datapi.py apigen.py tests

@@ -37,7 +37,7 @@ We acknowledge vulnerability reports within **48 hours** and target remediation 
 
 ### 3. DuckDB & SQLite Query Parameterization & Identifier Allowlisting
 - All ingested record values in `datapi/analytics.py` (`executemany("INSERT INTO records VALUES (?, ...)")`) and Parquet file paths in `datapi/infer.py` (`SELECT * FROM read_parquet(?)`) are passed via parameterized bindings, never string interpolation.
-- Because SQL engines cannot bind column identifiers via `?` placeholders, both `synthesize_summary_sql()` / `synthesize_timeseries_sql()` and the generated `/analytics/summary` & `/analytics/timeseries` FastAPI handlers strictly validate `group_by`, `date_field`, `metric`, and `table_name` against regex identifier rules (`^[A-Za-z_][A-Za-z0-9_]*$`) and the inferred `SchemaDef` column allowlist, and restrict `interval` to `("day", "month", "year")`. Unrecognized identifiers are rejected (`HTTP 400` / `ValueError`) prior to query synthesis.
+- Because SQL engines cannot bind column identifiers via `?` placeholders, both `synthesize_summary_sql()` / `synthesize_timeseries_sql()` and the generated `/analytics/summary` & `/analytics/timeseries` FastAPI handlers strictly validate `group_by`, `date_field`, `metric`, and `table_name` against regex identifier rules (`^[A-Za-z_][A-Za-z0-9_]*$`) and the inferred `SchemaDef` column allowlist, and restrict `interval` to `("day", "month", "year")`. Unrecognized identifiers are rejected (`HTTP 400` / `ValueError`) before query synthesis.
 
 ### 4. Consumer AST Patcher Safety (`datapi/patcher.py`)
 - **Dry-Run by Default:** `datapi patch` computes unified diffs (`diff -u`) in memory and never mutates consumer files on disk unless `--apply` is explicitly passed.

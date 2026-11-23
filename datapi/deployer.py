@@ -84,8 +84,10 @@ def generate_aws_manifests(
     service_slug = service_name.replace("-", "_").replace(".", "_")
 
     secret_block = ""
+    runtime_env_block = ""
     secrets_env_block = ""
     instance_block = ""
+    depends_on_block = ""
     if plan and getattr(plan, "auth_enabled", False):
         secret_block = f"""
 variable "api_key" {{
@@ -142,6 +144,10 @@ resource "aws_iam_role_policy" "{service_slug}_secret_access" {{
   }})
 }}
 """
+        runtime_env_block = f"""
+        runtime_environment_variables = {{
+          API_KEY_VERSION = aws_secretsmanager_secret_version.{service_slug}_api_key_val.version_id
+        }}"""
         secrets_env_block = f"""
         runtime_environment_secrets = {{
           API_KEY = aws_secretsmanager_secret.{service_slug}_api_key.arn
@@ -150,6 +156,12 @@ resource "aws_iam_role_policy" "{service_slug}_secret_access" {{
   instance_configuration {{
     instance_role_arn = aws_iam_role.{service_slug}_instance_role.arn
   }}
+"""
+        depends_on_block = f"""
+  depends_on = [
+    aws_secretsmanager_secret_version.{service_slug}_api_key_val,
+    aws_iam_role_policy.{service_slug}_secret_access,
+  ]
 """
 
     return f"""terraform {{
@@ -205,10 +217,7 @@ resource "aws_apprunner_service" "{service_slug}" {{
       image_repository_type = "ECR_PUBLIC"
 
       image_configuration {{
-        port = "8000"
-        runtime_environment_variables = {{
-          PORT = "8000"
-        }}{secrets_env_block}
+        port = "8000"{runtime_env_block}{secrets_env_block}
       }}
     }}
   }}
@@ -226,7 +235,7 @@ resource "aws_apprunner_service" "{service_slug}" {{
     ManagedBy = "datapi"
     Service   = "{service_name}"
   }}
-}}
+{depends_on_block}}}
 
 output "service_url" {{
   value       = "https://${{aws_apprunner_service.{service_slug}.service_url}}"

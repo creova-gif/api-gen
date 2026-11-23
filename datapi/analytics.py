@@ -27,6 +27,25 @@ def _validate_identifier(name: str, context: str = "identifier") -> str:
     return name
 
 
+def _sanitize_col_name(name: str) -> str:
+    cleaned = re.sub(r"[^0-9a-zA-Z_]", "_", str(name).strip())
+    if cleaned and cleaned[0].isdigit():
+        cleaned = f"f_{cleaned}"
+    return cleaned.lower() or "field"
+
+
+def _validate_table_name(schema: SchemaDef, table_name: str) -> str:
+    _validate_identifier(table_name, "table_name")
+    allowed_tables = {
+        "records",
+        _validate_identifier(schema.plural_name, "plural_name"),
+        _validate_identifier(schema.resource_name, "resource_name"),
+    }
+    if table_name not in allowed_tables:
+        raise ValueError(f"Invalid table_name '{table_name}'. Allowed tables: {sorted(allowed_tables)}")
+    return table_name
+
+
 def _get_numeric_fields(schema: SchemaDef) -> List[FieldDef]:
     """Finds numeric columns suitable for vectorized aggregation."""
     candidates = [
@@ -75,7 +94,7 @@ def synthesize_summary_sql(
     Synthesizes vectorized summary SQL query (COUNT, AVG, MIN, MAX, SUM).
     Works interchangeably in DuckDB and SQLite.
     """
-    _validate_identifier(table_name, "table_name")
+    _validate_table_name(schema, table_name)
     allowed_fields = {f.name for f in schema.fields}
     if group_by is not None:
         _validate_identifier(group_by, "group_by")
@@ -117,7 +136,7 @@ def synthesize_timeseries_sql(
     Synthesizes vectorized timeseries SQL with time bucketing and window functions.
     Supports 'duckdb' and 'sqlite' engines.
     """
-    _validate_identifier(table_name, "table_name")
+    _validate_table_name(schema, table_name)
     if interval not in _VALID_INTERVALS:
         raise ValueError(f"Invalid interval '{interval}'. Allowed: {_VALID_INTERVALS}")
 
@@ -201,10 +220,30 @@ class DuckDBAnalyticsEngine:
         if not self.records:
             return [], "none"
 
+        normalized_records = [
+            {_sanitize_col_name(k): v for k, v in r.items()}
+            for r in self.records
+        ]
+        if self.schema is not None:
+            schema_cols = [_validate_identifier(f.name, "column") for f in self.schema.fields]
+            keys = schema_cols
+            normalized_records = [
+                {col: nr.get(col) for col in keys}
+                for nr in normalized_records
+            ]
+        else:
+            seen: List[str] = []
+            for nr in normalized_records:
+                for k in nr.keys():
+                    valid_k = _validate_identifier(k, "column")
+                    if valid_k not in seen:
+                        seen.append(valid_k)
+            keys = seen
+
         if DUCKDB_AVAILABLE:
             try:
                 con = duckdb.connect(":memory:")
-                rows = self.records  # noqa: F841 - read by DuckDB replacement scan in the SQL below
+                rows = normalized_records  # noqa: F841 - read by DuckDB replacement scan in the SQL below
                 con.execute("CREATE TABLE records AS SELECT * FROM rows")
                 res = con.execute(sql_duckdb).fetchall()
                 cols = [d[0] for d in con.description]
@@ -216,13 +255,12 @@ class DuckDBAnalyticsEngine:
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        keys = [_validate_identifier(str(k), "column") for k in self.records[0].keys()]
         cols = ", ".join(f'"{k}"' for k in keys)
         placeholders = ", ".join("?" for _ in keys)
         cur.execute(f"CREATE TABLE records ({cols})")
         cur.executemany(
             f"INSERT INTO records VALUES ({placeholders})",
-            [[r.get(k) for k in keys] for r in self.records],
+            [[nr.get(k) for k in keys] for nr in normalized_records],
         )
         cur.execute(sql_sqlite)
         results = [dict(r) for r in cur.fetchall()]
@@ -308,11 +346,6 @@ def generate_duckdb_analytics_code(schema: Union[SchemaDef, List[SchemaDef], Any
 def get_{plural}_analytics_summary(
     group_by: Optional[str] = Query(None, description="Categorical or enum field to group by"),
 ):
-    target_db = globals().get("db_{plural}", globals().get("db", {{}}))
-    rows = list(target_db.values())
-    if not rows:
-        return {{"resource": "{plural}", "total": 0, "metrics": [], "engine": "none"}}
-
     valid_group_fields = {cat_fields_repr}
     all_fields = {all_fields_repr}
     if group_by and group_by not in valid_group_fields and group_by not in all_fields:
@@ -320,6 +353,11 @@ def get_{plural}_analytics_summary(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid group_by field: {{group_by}}. Allowed fields: {{valid_group_fields}}",
         )
+
+    target_db = globals().get("db_{plural}", globals().get("db", {{}}))
+    rows = list(target_db.values())
+    if not rows:
+        return {{"resource": "{plural}", "total": 0, "metrics": [], "engine": "none"}}
 
     numeric_cols = {numeric_cols_repr}
     aggs = ["COUNT(*) AS total_count"]
@@ -340,7 +378,7 @@ def get_{plural}_analytics_summary(
     else:
         sql = f\'SELECT\\n    {{agg_clause}}\\nFROM records\'
 
-    results, engine = _execute_analytics_query(sql, sql, rows)
+    results, engine = _execute_analytics_query(sql, sql, rows, allowed_columns=all_fields)
     return {{
         "resource": "{plural}",
         "group_by": group_by,
@@ -359,11 +397,6 @@ def get_{plural}_analytics_timeseries(
     interval: str = Query("day", description="Time bucket interval (day, month, year)"),
     metric: Optional[str] = Query(None, description="Numeric metric column to aggregate"),
 ):
-    target_db = globals().get("db_{plural}", globals().get("db", {{}}))
-    rows = list(target_db.values())
-    if not rows:
-        return {{"resource": "{plural}", "total": 0, "timeseries": [], "engine": "none"}}
-
     all_fields = {all_fields_repr}
     numeric_cols = {numeric_cols_repr}
     if interval not in ("day", "month", "year"):
@@ -381,6 +414,11 @@ def get_{plural}_analytics_timeseries(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid metric: {{metric}}. Allowed fields: {{numeric_cols}}",
         )
+
+    target_db = globals().get("db_{plural}", globals().get("db", {{}}))
+    rows = list(target_db.values())
+    if not rows:
+        return {{"resource": "{plural}", "total": 0, "timeseries": [], "engine": "none"}}
 
     date_col = date_field or "{default_date_field}"
     metric_col = metric or ("{default_metric_field}" if "{default_metric_field}" else None)
@@ -434,7 +472,7 @@ SELECT
 FROM aggregated
 ORDER BY period ASC"""
 
-    results, engine = _execute_analytics_query(duckdb_sql, sqlite_sql, rows)
+    results, engine = _execute_analytics_query(duckdb_sql, sqlite_sql, rows, allowed_columns=all_fields)
     return {{
         "resource": "{plural}",
         "date_field": date_col,
@@ -463,18 +501,45 @@ from fastapi import Query, HTTPException, status
 _ANALYTICS_IDENT_RE = _re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
+def _sanitize_analytics_col(name: str) -> str:
+    cleaned = _re.sub(r"[^0-9a-zA-Z_]", "_", str(name).strip())
+    if cleaned and cleaned[0].isdigit():
+        cleaned = f"f_{cleaned}"
+    return cleaned.lower() or "field"
+
+
 def _execute_analytics_query(
     sql_duckdb: str,
     sql_sqlite: str,
     records: List[Dict[str, Any]],
+    allowed_columns: Optional[List[str]] = None,
 ) -> Tuple[List[Dict[str, Any]], str]:
     if not records:
         return [], "none"
 
+    normalized_records = [
+        {_sanitize_analytics_col(k): v for k, v in r.items()}
+        for r in records
+    ]
+    if allowed_columns:
+        keys = [c for c in allowed_columns if _ANALYTICS_IDENT_RE.fullmatch(c)]
+        normalized_records = [
+            {col: nr.get(col) for col in keys}
+            for nr in normalized_records
+        ]
+    else:
+        keys = []
+        for nr in normalized_records:
+            for k in nr.keys():
+                if not _ANALYTICS_IDENT_RE.fullmatch(k):
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid column identifier: {k}")
+                if k not in keys:
+                    keys.append(k)
+
     if _DUCKDB_AVAILABLE:
         try:
             con = _duckdb.connect(":memory:")
-            rows = records
+            rows = normalized_records
             con.execute("CREATE TABLE records AS SELECT * FROM rows")
             res = con.execute(sql_duckdb).fetchall()
             cols = [d[0] for d in con.description]
@@ -485,17 +550,12 @@ def _execute_analytics_query(
     conn = _sqlite3.connect(":memory:")
     conn.row_factory = _sqlite3.Row
     cur = conn.cursor()
-    keys = [str(k) for k in records[0].keys()]
-    for k in keys:
-        if not _ANALYTICS_IDENT_RE.fullmatch(k):
-            conn.close()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid column identifier: {k}")
     cols = ", ".join(f\'"{k}"\' for k in keys)
     placeholders = ", ".join("?" for _ in keys)
     cur.execute(f"CREATE TABLE records ({cols})")
     cur.executemany(
         f"INSERT INTO records VALUES ({placeholders})",
-        [[r.get(k) for k in keys] for r in records],
+        [[nr.get(k) for k in keys] for nr in normalized_records],
     )
     cur.execute(sql_sqlite)
     results = [dict(r) for r in cur.fetchall()]
