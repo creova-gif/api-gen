@@ -83,9 +83,86 @@ def generate_aws_manifests(
 
     service_slug = service_name.replace("-", "_").replace(".", "_")
 
-    auth_env = ""
+    secret_block = ""
+    runtime_env_block = ""
+    secrets_env_block = ""
+    instance_block = ""
+    depends_on_block = ""
     if plan and getattr(plan, "auth_enabled", False):
-        auth_env = '\n          API_KEY = "REPLACE_WITH_SECRET"'
+        secret_block = f"""
+variable "api_key" {{
+  type        = string
+  sensitive   = true
+  description = "API key clients must send in the X-API-Key header"
+}}
+
+# AWS Secrets Manager Secret for API Key
+resource "aws_secretsmanager_secret" "{service_slug}_api_key" {{
+  name = "{service_name}/api-key"
+
+  tags = {{
+    ManagedBy = "datapi"
+    Service   = "{service_name}"
+  }}
+}}
+
+resource "aws_secretsmanager_secret_version" "{service_slug}_api_key_val" {{
+  secret_id     = aws_secretsmanager_secret.{service_slug}_api_key.id
+  secret_string = var.api_key
+}}
+
+resource "aws_iam_role" "{service_slug}_instance_role" {{
+  name = "{service_name}-apprunner-instance-role"
+
+  assume_role_policy = jsonencode({{
+    Version = "2012-10-17"
+    Statement = [
+      {{
+        Effect = "Allow"
+        Principal = {{
+          Service = "tasks.apprunner.amazonaws.com"
+        }}
+        Action = "sts:AssumeRole"
+      }}
+    ]
+  }})
+}}
+
+resource "aws_iam_role_policy" "{service_slug}_secret_access" {{
+  name = "{service_name}-secret-access"
+  role = aws_iam_role.{service_slug}_instance_role.id
+
+  policy = jsonencode({{
+    Version = "2012-10-17"
+    Statement = [
+      {{
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = [aws_secretsmanager_secret.{service_slug}_api_key.arn]
+      }}
+    ]
+  }})
+}}
+"""
+        runtime_env_block = f"""
+        runtime_environment_variables = {{
+          API_KEY_VERSION = aws_secretsmanager_secret_version.{service_slug}_api_key_val.version_id
+        }}"""
+        secrets_env_block = f"""
+        runtime_environment_secrets = {{
+          API_KEY = aws_secretsmanager_secret.{service_slug}_api_key.arn
+        }}"""
+        instance_block = f"""
+  instance_configuration {{
+    instance_role_arn = aws_iam_role.{service_slug}_instance_role.arn
+  }}
+"""
+        depends_on_block = f"""
+  depends_on = [
+    aws_secretsmanager_secret_version.{service_slug}_api_key_val,
+    aws_iam_role_policy.{service_slug}_secret_access,
+  ]
+"""
 
     return f"""terraform {{
   required_version = ">= 1.5.0"
@@ -112,7 +189,7 @@ variable "image_uri" {{
 provider "aws" {{
   region = var.aws_region
 }}
-
+{secret_block}
 # Auto-Scaling Configuration for AWS App Runner (Min: 1, Max: 5)
 resource "aws_apprunner_auto_scaling_configuration_version" "{service_slug}_scaling" {{
   auto_scaling_configuration_name = "{service_name}-scaling"
@@ -140,14 +217,11 @@ resource "aws_apprunner_service" "{service_slug}" {{
       image_repository_type = "ECR_PUBLIC"
 
       image_configuration {{
-        port = "8000"
-        runtime_environment_variables = {{
-          PORT = "8000"{auth_env}
-        }}
+        port = "8000"{runtime_env_block}{secrets_env_block}
       }}
     }}
   }}
-
+{instance_block}
   health_check_configuration {{
     protocol            = "HTTP"
     path                = "/healthz"
@@ -161,7 +235,7 @@ resource "aws_apprunner_service" "{service_slug}" {{
     ManagedBy = "datapi"
     Service   = "{service_name}"
   }}
-}}
+{depends_on_block}}}
 
 output "service_url" {{
   value       = "https://${{aws_apprunner_service.{service_slug}.service_url}}"

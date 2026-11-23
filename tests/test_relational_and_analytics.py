@@ -5,19 +5,27 @@ SQL synthesis, and vectorized in-memory query execution.
 """
 
 import ast
+from datetime import date, datetime
+from decimal import Decimal
 import json
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
+from datapi.generator import generate_project
 from datapi.infer import (
+    _duckdb,
     ForeignKeyDef,
     infer_from_directory,
     infer_from_file,
     infer_multi_table_relationships,
     infer_schema_from_records,
 )
+from datapi.planner import create_api_plan
 from datapi.analytics import (
     DuckDBAnalyticsEngine,
     generate_analytics_endpoints,
@@ -281,6 +289,120 @@ class TestRelationalAndAnalytics(unittest.TestCase):
         self.assertEqual(ts_rows[1]["count"], 1)
         self.assertEqual(ts_rows[1]["cumulative_count"], 3)
         self.assertEqual(ts_rows[1]["sum_metric"], 150.0)
+
+    def test_analytics_sql_identifier_allowlist_and_auth_guard(self):
+        records = [
+            {"id": 1, "amount": 100.0, "category": "books", "created_at": "2026-11-01"},
+        ]
+        schema = infer_schema_from_records(records, resource_name="sale")
+
+        with self.assertRaises(ValueError):
+            synthesize_summary_sql(schema, group_by="nonexistent_column")
+        with self.assertRaises(ValueError):
+            synthesize_summary_sql(schema, group_by='category"; DROP TABLE records; --')
+        with self.assertRaises(ValueError):
+            synthesize_summary_sql(schema, table_name="arbitrary_unlisted_table")
+        with self.assertRaises(ValueError):
+            synthesize_timeseries_sql(schema, interval="hourly; DROP TABLE records")
+        with self.assertRaises(ValueError):
+            synthesize_timeseries_sql(schema, metric_field="unknown_metric")
+        with self.assertRaises(ValueError):
+            synthesize_timeseries_sql(schema, table_name="arbitrary_unlisted_table")
+
+        plan_auth = create_api_plan(schema, auth_enabled=True)
+        auth_analytics_code = generate_duckdb_analytics_code(plan_auth)
+        self.assertIn("dependencies=[Depends(verify_api_key)]", auth_analytics_code)
+
+    def test_analytics_spaced_headers_sqlite_fallback_and_empty_validation(self):
+        """Verifies spaced source headers work on SQLite fallback and invalid params fail on empty stores."""
+        records = [
+            {"id": 1, "amount": 100.0, "Display Name": "Alice", " Rogue!! ": "ignored"},
+            {"id": 2, "amount": 50.0, "Display Name": "Bob", " Rogue!! ": "ignored"},
+        ]
+        schema = infer_schema_from_records(
+            [{"id": r["id"], "amount": r["amount"], "Display Name": r["Display Name"]} for r in records],
+            resource_name="invoice",
+        )
+        with patch("datapi.analytics.DUCKDB_AVAILABLE", False):
+            engine = DuckDBAnalyticsEngine(records, schema)
+            summary = engine.summary()
+            self.assertEqual(summary["engine"], "sqlite")
+            self.assertEqual(summary["metrics"][0]["total_count"], 2)
+            self.assertEqual(summary["metrics"][0]["sum_amount"], 150.0)
+
+        plan = create_api_plan(schema)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            files = generate_project(plan, Path(tmpdir))
+            ns = {}
+            exec(compile(Path(files["app/main.py"]).read_text(encoding="utf-8"), files["app/main.py"], "exec"), ns)
+            ns["_DUCKDB_AVAILABLE"] = False
+            client = TestClient(ns["app"])
+            res_ok = client.get("/invoices/analytics/summary")
+            self.assertEqual(res_ok.status_code, 200)
+            self.assertEqual(res_ok.json()["metrics"][0]["total_count"], 2)
+
+            # Empty store must still reject invalid group_by and interval with HTTP 400
+            ns["db"].clear()
+            ns["db_invoices"].clear()
+            res_bad_group = client.get("/invoices/analytics/summary?group_by=unknown_col")
+            self.assertEqual(res_bad_group.status_code, 400)
+            res_bad_interval = client.get("/invoices/analytics/timeseries?interval=invalid")
+            self.assertEqual(res_bad_interval.status_code, 400)
+
+    def test_parquet_ingestion_dates_decimals_and_directory_error_propagation(self):
+        """Verifies native date/datetime/Decimal normalization into JSON OpenAPI and directory error propagation."""
+        native_records = [
+            {
+                "event_id": 1,
+                "created_on": date(2026, 11, 1),
+                "occurred_at": datetime(2026, 11, 1, 12, 30, 0),
+                "unit_price": Decimal("49.99"),
+            }
+        ]
+        native_schema = infer_schema_from_records(native_records, resource_name="event")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            files = generate_project(create_api_plan(native_schema), Path(tmpdir) / "native_out")
+            spec = json.loads(Path(files["openapi.json"]).read_text(encoding="utf-8"))
+            props = spec["components"]["schemas"]["EventBase"]["properties"]
+            self.assertEqual(props["created_on"]["example"], "2026-11-01")
+            self.assertIsInstance(props["unit_price"]["example"], float)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            (tmp_path / "customers.csv").write_text("id,name\n1,Alice\n", encoding="utf-8")
+            parquet_path = tmp_path / "events.parquet"
+            parquet_path.write_bytes(b"PAR1")
+            with patch("datapi.infer._duckdb", None):
+                with self.assertRaises(RuntimeError) as ctx:
+                    infer_from_file(parquet_path)
+                self.assertIn("datapi[analytics]", str(ctx.exception))
+                with self.assertRaises(RuntimeError):
+                    infer_from_directory(tmp_path)
+
+            if _duckdb is not None:
+                con = _duckdb.connect(":memory:")
+                escaped = str(parquet_path).replace("'", "''")
+                con.execute(
+                    f"COPY (SELECT 1 AS event_id, DATE '2026-11-01' AS created_on, "
+                    f"TIMESTAMP '2026-11-01 10:15:00' AS occurred_at, "
+                    f"CAST(42.50 AS DECIMAL(10, 2)) AS unit_price) "
+                    f"TO '{escaped}' (FORMAT PARQUET)"
+                )
+                con.close()
+                schema = infer_from_file(parquet_path)
+                self.assertEqual(schema.resource_name, "event")
+                self.assertEqual(schema.primary_key, "event_id")
+                field_map = {f.name: f for f in schema.fields}
+                self.assertEqual(field_map["created_on"].python_type, "date")
+                self.assertEqual(field_map["occurred_at"].python_type, "datetime")
+                self.assertEqual(field_map["unit_price"].python_type, "float")
+
+                out_dir = tmp_path / "parquet_api"
+                gen_files = generate_project(create_api_plan(schema), out_dir)
+                spec = json.loads(Path(gen_files["openapi.json"]).read_text(encoding="utf-8"))
+                props = spec["components"]["schemas"]["EventBase"]["properties"]
+                self.assertEqual(props["created_on"]["example"], "2026-11-01")
+                self.assertIsInstance(props["unit_price"]["example"], float)
 
 
 if __name__ == "__main__":

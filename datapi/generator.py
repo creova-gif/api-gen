@@ -10,6 +10,7 @@ import random
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List
+from datapi.analytics import generate_duckdb_analytics_code
 from datapi.planner import APIPlan
 from datapi.infer import FieldDef, SchemaDef
 from datapi.sdk_generator import generate_typescript_sdk
@@ -486,6 +487,7 @@ from datetime import date, datetime
 from decimal import Decimal
 import http
 import json
+import os
 import time
 from typing import Any, Dict, List, Optional
 import uuid
@@ -568,10 +570,11 @@ def scalar_docs():
     </html>
     """
 
+_cors_origins = [o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins or ["*"],
+    allow_credentials=bool(_cors_origins and "*" not in _cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -1055,8 +1058,7 @@ def delete_{s_res}({s_pk}: str):
     return None
 '''
 
-    from datapi.analytics import generate_duckdb_analytics_code
-    code += "\n\n" + generate_duckdb_analytics_code(getattr(plan, "all_schemas", [plan.schema]))
+    code += "\n\n" + generate_duckdb_analytics_code(plan)
 
     return code
 

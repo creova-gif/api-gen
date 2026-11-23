@@ -29,6 +29,9 @@ share/python-wheels/
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.p12
 .venv/
 env/
 venv/
@@ -41,15 +44,22 @@ generated_*/
 output_*/
 demo_*/
 test_api*/
+test_deploy*/
 docker_api/
+pr_test.md
 *.db
 *.sqlite*
 
-# Agent & IDE scratch
+# AI agent & IDE harness clutter
 .claude/
+.agents/
+.cursor/
 .conductor/
+gstack/
 .gstack/
 .devin/
+attached_assets/
+mockup-sandbox/
 .pytest_cache/
 .DS_Store
 .vscode/

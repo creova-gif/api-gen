@@ -7,6 +7,7 @@ deployment bundle generation, and CLI deploy execution.
 import contextlib
 import io
 import json
+import re
 import tempfile
 try:
     import tomllib
@@ -20,6 +21,7 @@ from datapi.planner import APIPlan, create_api_plan
 from datapi.deployer import (
     generate_fly_config,
     generate_aws_manifests,
+    generate_cloudrun_manifests,
     generate_deployment_bundle,
 )
 from datapi.cli import main
@@ -126,12 +128,60 @@ class TestAWSManifests(unittest.TestCase):
         self.assertIn('protocol            = "HTTP"', hcl)
 
     def test_aws_manifests_custom_service_name_and_auth(self):
-        """Verifies custom service naming and auth environment injection."""
+        """Verifies custom service naming and Secret Manager secret injection without hardcoded defaults."""
         plan_auth = _create_sample_plan(auth_enabled=True, resource_name="order")
         hcl = generate_aws_manifests(plan_auth, service_name="order-api")
         self.assertIn('service_name = "order-api"', hcl)
         self.assertIn('order_api_scaling', hcl)
-        self.assertIn('API_KEY', hcl)
+        self.assertIn('variable "api_key"', hcl)
+        self.assertIn('sensitive   = true', hcl)
+        self.assertIn('resource "aws_secretsmanager_secret" "order_api_api_key"', hcl)
+        self.assertIn('runtime_environment_secrets = {', hcl)
+        self.assertIn('API_KEY = aws_secretsmanager_secret.order_api_api_key.arn', hcl)
+        self.assertIn('API_KEY_VERSION = aws_secretsmanager_secret_version.order_api_api_key_val.version_id', hcl)
+        self.assertIn('aws_secretsmanager_secret_version.order_api_api_key_val', hcl)
+        self.assertIn('aws_iam_role_policy.order_api_secret_access', hcl)
+        self.assertIn('depends_on = [', hcl)
+        self.assertNotIn('PORT = "8000"', hcl)
+        self.assertNotIn("REPLACE_WITH_SECRET", hcl)
+        self.assertNotIn("change-me", hcl)
+
+        api_key_var_match = re.search(r'variable\s+"api_key"\s*\{([^}]*)\}', hcl)
+        self.assertIsNotNone(api_key_var_match)
+        self.assertIn("sensitive", api_key_var_match.group(1))
+        self.assertNotIn("default", api_key_var_match.group(1))
+
+    def test_aws_manifests_unauthenticated_omits_secret_resources(self):
+        """Verifies unauthenticated AWS manifests omit api_key variable, depends_on, and reserved PORT env."""
+        hcl = generate_aws_manifests(self.plan, service_name="public-api")
+        self.assertNotIn('variable "api_key"', hcl)
+        self.assertNotIn("aws_secretsmanager_secret", hcl)
+        self.assertNotIn("depends_on", hcl)
+        self.assertNotIn('PORT = "8000"', hcl)
+        self.assertNotIn("REPLACE_WITH_SECRET", hcl)
+
+    def test_studio_terraform_secret_iam_and_ordering(self):
+        """Verifies Studio Cloud Run Terraform template grants secretAccessor to service identity with depends_on."""
+        studio_html = (Path(__file__).resolve().parent.parent / "datapi" / "studio" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('resource "google_secret_manager_secret_iam_member" "cloud_run_secret_access"', studio_html)
+        self.assertIn('roles/secretmanager.secretAccessor', studio_html)
+        self.assertIn('google_service_account', studio_html)
+        self.assertIn('google_secret_manager_secret_version.api_key_val', studio_html)
+        self.assertNotIn("prod-secret-key-change-me", studio_html)
+
+    def test_cloudrun_manifests_secret_hygiene(self):
+        """Verifies GCP Cloud Run Terraform marks api_key sensitive with no default value."""
+        plan_auth = _create_sample_plan(auth_enabled=True, resource_name="order")
+        hcl = generate_cloudrun_manifests(plan_auth, service_name="order-api")
+        self.assertIn('variable "api_key"', hcl)
+        self.assertIn('sensitive   = true', hcl)
+        self.assertIn('resource "google_secret_manager_secret" "api_key"', hcl)
+        self.assertNotIn("REPLACE_WITH_SECRET", hcl)
+
+        api_key_var_match = re.search(r'variable\s+"api_key"\s*\{([^}]*)\}', hcl)
+        self.assertIsNotNone(api_key_var_match)
+        self.assertIn("sensitive", api_key_var_match.group(1))
+        self.assertNotIn("default", api_key_var_match.group(1))
 
 
 class TestDeploymentBundle(unittest.TestCase):
