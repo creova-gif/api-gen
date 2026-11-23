@@ -5,11 +5,11 @@
 
 ## 1. The 3-Line Promise
 
-Turn any CSV, JSON, Parquet, or SQLite dataset into a self-maintaining, continuously tested REST API inside your GitHub Actions pipeline:
+Turn any CSV, JSON, or SQLite dataset into a self-maintaining, continuously tested REST API inside your GitHub Actions pipeline:
 
 ```yaml
 - name: Generate & Verify Data API
-  uses: datapi-dev/datapi-action@v1
+  uses: creova-gif/datapi/.github/actions/datapi-action@main
   with:
     data-file: data/customers.csv
 ```
@@ -74,7 +74,7 @@ jobs:
           git show main:data/customers.csv > /tmp/customers_baseline.csv || true
 
       - name: Run datapi Contract Verification
-        uses: datapi-dev/datapi-action@v1
+        uses: creova-gif/datapi/.github/actions/datapi-action@main
         with:
           data-file: data/customers.csv
           old-schema: /tmp/customers_baseline.csv
@@ -109,7 +109,7 @@ jobs:
 
       - name: Generate API Microservice
         id: datapi
-        uses: datapi-dev/datapi-action@v1
+        uses: creova-gif/datapi/.github/actions/datapi-action@main
         with:
           data-file: data/inventory.json
           output-dir: ./dist/inventory-service
@@ -150,7 +150,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Synthesize Tested Microservice
-        uses: datapi-dev/datapi-action@v1
+        uses: creova-gif/datapi/.github/actions/datapi-action@main
         with:
           data-file: data/transactions.csv
           output-dir: ./dist/transactions-api
@@ -181,7 +181,7 @@ jobs:
 
 | Input | Required | Default | Description |
 | :--- | :---: | :---: | :--- |
-| `data-file` | **Yes** | — | Path to primary data file (`.csv`, `.json`, `.sqlite`, `.parquet`). |
+| `data-file` | **Yes** | — | Path to primary data file (`.csv`, `.json`, `.sqlite`). |
 | `output-dir` | No | `./generated-api` | Destination directory where the complete API codebase will be written. |
 | `fail-on-breaking` | No | `true` | When `true`, halts the workflow with an exit code 1 if breaking changes are detected against `old-schema`. |
 | `auth` | No | `false` | When `true`, secures all endpoints with `X-API-Key` header authentication. |
